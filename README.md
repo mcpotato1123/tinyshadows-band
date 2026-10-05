@@ -57,6 +57,7 @@ tinyshadows-band/
 ├─ NOTICE.md                 素材版权说明（哪些内容不在 MIT 范围内）
 ├─ PUSH.md                   推到 GitHub 的说明（本机网络受限，见文末）
 ├─ cover/                    平台封面（宽高比 1.5，PNG 母版 + JPG 上传用）
+├─ screenshots/              平台截图（336×480 原生；@3x 放大版不进仓库）
 ├─ src/                      快应用源码（Vela 固定目录名）
 │  ├─ manifest.json          应用清单：包名/图标/路由/features/designWidth
 │  ├─ app.ux                 应用入口（本工程不用全局生命周期）
@@ -90,6 +91,7 @@ tinyshadows-band/
    ├─ preview_port.py        用真实资源按 game.ux 的 CSS 数值合成界面效果图
    ├─ audit_stage.py         扫「画面状态与演出对不上」的地方（见第五节坑 5）
    ├─ make_cover.py          用原作标题画面的分层素材拼宽高比 1.5 的封面
+   ├─ screenshots.py         按各页 .ux 的 CSS 数值合成应用截图（各页 + 宣传拼图）
    └─ storygen/              内容转换流水线（本工程新写，见第六节）
       ├─ build_output.py       ① 解包原作 .rpa（背景 / 立绘 / CG / 界面素材）
       ├─ rpa_tool.py           RPA 解包器
@@ -146,6 +148,7 @@ npm run audit                  # 画面状态审计（第五节坑 5 / 坑 6 的
 | `npm run audit` | 只跑画面状态审计（立绘跨场景残留等） |
 | `npm run gen` | 从解包结果重新生成 `src/` 的内容部分 |
 | `npm run preview` | 重新合成 `preview/ui-preview.png` |
+| `npm run shots` | 重新合成 `screenshots/` 里的各页截图与宣传拼图 |
 | `npm run verify` | 上传前自检（UTF-8 / README 图片） |
 
 从 PC 版原始资源重新生成（需要 Python 3 + Pillow，以及解包工具产出的目录）：

@@ -13,6 +13,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# 截图的 3x 放大版是派生物，用 npm run shots 随时重生成
+screenshots/*@3x.png
+
 # 编辑器 / 系统
 .DS_Store
 Thumbs.db

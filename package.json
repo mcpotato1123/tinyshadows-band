@@ -13,7 +13,8 @@
     "preview": "python tools/preview_port.py .",
     "audit": "python tools/audit_stage.py .",
     "verify": "python tools/check_encoding.py .",
-    "gen": "python tools/storygen/build_galgod_port.py"
+    "gen": "python tools/storygen/build_galgod_port.py",
+    "shots": "python tools/screenshots.py ."
   },
   "devDependencies": {
     "aiot-toolkit": "2.0.5",
