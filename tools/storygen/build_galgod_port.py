@@ -285,8 +285,36 @@ def patch_pages(dst_pages, ver):
                           "      const ok = this.anySeen(g)")
             s = sub(s, "    if (!this.seen[g.u]) {",
                           "    if (!this.anySeen(g)) {")
-            open(p, "w", encoding="utf-8").write(s)
+
+        # 打开一张 CG 时从中间开始看。
+        # galgod 这里写的是 `setPan(CG_PAN_RANGE / 2)`，是**正数**，
+        # 而 setPan() 第一句就是 `if (l > 0) l = 0` —— 于是永远被夹到最左边。
+        # 后果是 canLeft 恒为 false（左侧点击热区不出现）、往右拖也纹丝不动，
+        # 一半的画面拖不出来。按它自己注释的意思（「每张 CG 都从中间开始看」）
+        # 应该是负的一半。
+        if "setPan(-CG_PAN_RANGE / 2)" not in s:
+            s = sub(s, "    this.setPan(CG_PAN_RANGE / 2)",
+                    "    // 负的一半：setPan() 会把正数夹成 0（=最左边），\n"
+                    "    // 那样只能往一个方向拖\n"
+                    "    this.setPan(-CG_PAN_RANGE / 2)",
+                    "CG-起始居中")
+
+        # .page 补上 overflow: hidden。.big 是 854 宽、比屏幕宽一倍多，
+        # galgod 在 game.ux 里为同样的宽子节点专门加过这个：不裁住的话
+        # 运行时会把这个页面当成「内容比视口宽」的横向可滚动区域，
+        # 玩家的拖动会去滚整个页面、和 left 打架。
+        if "overflow: hidden; }" not in s.split(".viewer")[0]:
+            s = sub(s, "  .page { width: 336px; height: 480px; "
+                       "background-color: #14101a; position: relative; }",
+                    "  .page { width: 336px; height: 480px; "
+                    "background-color: #14101a; position: relative;\n"
+                    "          /* .big 有 854 宽，比屏幕宽一倍多。不裁住的话运行时\n"
+                    "             会当成横向可滚动页面，拖动会和 left 打架 */\n"
+                    "          overflow: hidden; }",
+                    "CG-页面裁切")
+        if "cg" not in done:
             done.append("cg")
+        open(p, "w", encoding="utf-8").write(s)
 
     # 立绘丝袜：原作的 syq_adjuster 按 persistent.stockings_color 决定立绘穿什么。
     # 移植版在 game.ux 里按同一套规则换图（剧本里的 stockings_color 就是那个值）。
