@@ -56,6 +56,7 @@ tinyshadows-band/
 ├─ LICENSE                   本项目**代码**的 MIT 协议
 ├─ NOTICE.md                 素材版权说明（哪些内容不在 MIT 范围内）
 ├─ PUSH.md                   推到 GitHub 的说明（本机网络受限，见文末）
+├─ cover/                    平台封面（宽高比 1.5，PNG 母版 + JPG 上传用）
 ├─ src/                      快应用源码（Vela 固定目录名）
 │  ├─ manifest.json          应用清单：包名/图标/路由/features/designWidth
 │  ├─ app.ux                 应用入口（本工程不用全局生命周期）
@@ -88,6 +89,7 @@ tinyshadows-band/
    ├─ check_encoding.py      ← galgod 原版：上传前自检（UTF-8 / 误传文件 / README 图片）
    ├─ preview_port.py        用真实资源按 game.ux 的 CSS 数值合成界面效果图
    ├─ audit_stage.py         扫「画面状态与演出对不上」的地方（见第五节坑 5）
+   ├─ make_cover.py          用原作标题画面的分层素材拼宽高比 1.5 的封面
    └─ storygen/              内容转换流水线（本工程新写，见第六节）
       ├─ build_output.py       ① 解包原作 .rpa（背景 / 立绘 / CG / 界面素材）
       ├─ rpa_tool.py           RPA 解包器
