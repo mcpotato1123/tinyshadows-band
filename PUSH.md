@@ -1,7 +1,7 @@
 # 推到 GitHub
 
-仓库已经在本目录初始化好，`main` 分支上有一个提交（39 个文件）。**还没推出去**——
-这台机器推不了，原因和三条可行路线写在下面。
+仓库已经在本目录初始化好，`main` 分支上有 4 个提交（**234 个文件，含素材**）。
+**还没推出去**——这台机器推不了，原因和三条可行路线写在下面。
 
 先看一眼现状：
 
@@ -95,49 +95,52 @@ git push -u origin main
 
 ---
 
-## 关于版权素材（**推之前请先决定**）
+## 关于版权素材
 
-`.gitignore` 里**默认排除了原作的剧本与美术**：
+仓库现在是「**连素材一起收录**」的模式，和 [galgod-band](https://github.com/mcpotato1123/galgod-band) 一致：
 
-```
-src/common/story/        原作剧本
-src/common/img/          背景 / 立绘 / CG
-src/common/home.png      标题画
-src/common/logo.png      标题 logo
-src/common/icon.png      应用图标
-src/common/assets.js     由素材生成的索引表
-src/common/cglist.js     同上
-```
+| 路径 | 内容 | 版权 |
+|---|---|---|
+| `src/common/story/` | 剧本文字（2,503 句对白） | 原作《小小的身影，重叠的内心》及其开发方 |
+| `src/common/img/` | 背景 25 / 立绘 94 / CG 40 / 缩略图 8 | 同上 |
+| `src/common/home.png`、`logo.png`、`icon.png` | 标题画 / 标题 logo / 应用图标 | 同上 |
 
-原因：这些是 PC 版《小小的身影，重叠的内心》的资源，**版权归原作及其开发方所有，
-不在 galgod-band 的 MIT 协议范围内**。公开仓库里放这些属于再分发，有可能被 DMCA 下架。
+这些**不在 MIT 协议范围内**。声明放在 `NOTICE.md` 而不是 `LICENSE` 里——
+GitHub 是靠跟官方模板做相似度匹配来识别协议的，在 MIT 正文后面追加内容会导致
+仓库页面显示不出 MIT 标识。这一段做法照搬 galgod-band。
 
-所以当前仓库是「**引擎 + 转换工具 + 文档**」：别人克隆下来要**自备原作**，
-再按 README 第六节跑一遍 `tools/storygen/` 的流水线生成内容。
-这对一个移植工具仓库来说是完整且自洽的。
+收录它们只是为了**让仓库能直接构建出可运行的包**；引擎本身不依赖任何具体素材。
 
-### 如果你要连素材一起发布
+### 如果版权方有异议
 
-三种选择，按风险从低到高：
-
-1. **私有仓库**——自己留档，不对外分发。（把仓库设为 Private 即可）
-2. **公开但只放代码**（当前状态）——推荐。
-3. **公开且含素材**——把 `.gitignore` 里「版权素材」那一段注释掉，然后：
+删掉上表里的目录与文件即可，此时仓库仍然可用——用 `tools/storygen/` 的流水线，
+从**你自己的原作拷贝**重新生成一遍：
 
 ```bash
-cd galgod-port
-git add -f src/common/story src/common/img src/common/home.png \
-           src/common/logo.png src/common/icon.png \
-           src/common/assets.js src/common/cglist.js
-git commit -m "加入内容素材（含原作的剧本与美术）"
-git push
+python tools/storygen/build_output.py      # 解包原作 rpa
+python tools/storygen/build_galgod_port.py # 转成 galgod 数据格式 + 生成索引表
 ```
 
-注意这会写进 git 历史，之后想彻底移除要改写历史（`git filter-repo`）。
+### 或者干脆只发引擎+工具
+
+把 `.gitignore` 里加回下面几行，再 `git rm -r --cached` 对应路径：
+
+```
+src/common/story/
+src/common/img/
+src/common/home.png
+src/common/logo.png
+src/common/icon.png
+src/common/assets.js
+src/common/cglist.js
+```
+
+注意：素材**已经写进 git 历史**了，想彻底移除要改写历史（`git filter-repo`）。
 
 ---
 
 ## 顺带一提
 
-`dist/*.rpk`（8.44 MB 的安装包）也在 `.gitignore` 里（galgod-band 上游同样忽略它）。
+`dist/*.rpk`（8.44 MB 的安装包）在 `.gitignore` 里（galgod-band 上游同样忽略它）。
 如果想随仓库发安装包，更合适的做法是**发 GitHub Release** 挂附件，而不是提交进仓库。
+
