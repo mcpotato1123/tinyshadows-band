@@ -1,0 +1,5 @@
+# 统一用 LF。这工程是按 LF 校验过的（tools/check_encoding.py），
+# 不能让 Windows 上的 git 在 checkout 时换成 CRLF。
+* text=auto eol=lf
+*.png binary
+*.rpk binary

@@ -1,0 +1,200 @@
+<template>
+  <div class="page" onswipe="ban">
+    <!-- 彩蛋触发点：连点「关于」7 次 -->
+    <text class="title" onclick="tapTitle" onswipe="ban">关于</text>
+    <text class="dots">{{dots}}</text>
+    <text class="sub">小小的身影 · 小米手环 9 Pro 版 · v{{ver}}</text>
+
+    <list id="about-list" class="lst" bounces="true" onswipe="ban">
+      <list-item class="item" for="{{rows}}" tid="ab">
+        <div class="card">
+          <text class="{{$item.c}}">{{$item.t}}</text>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="back" onclick="back" onswipe="ban"><text class="btn-t">返回</text></div>
+
+    <!-- 彩蛋菜单 -->
+    <div class="mask" if="{{eggOpen}}"></div>
+    <div class="egg" if="{{eggOpen}}">
+      <text class="egg-t">？？？</text>
+      <div class="egg-b" onclick="unlockAfter" onswipe="ban"><text class="egg-bt">解锁 · 后日谈</text></div>
+      <div class="egg-b" onclick="unlockCg" onswipe="ban"><text class="egg-bt">解锁 · 全部 CG</text></div>
+      <div class="egg-b egg-c" onclick="closeEgg" onswipe="ban"><text class="egg-bt">关闭</text></div>
+    </div>
+  </div>
+</template>
+
+<style>
+  .page { width: 336px; height: 480px; background-color: #14101a; position: relative; }
+  .title { position: absolute; top: 4px; left: 0px; width: 336px; text-align: center;
+           font-size: 22px; color: #ffd8e6; font-weight: bold; }
+  .dots { position: absolute; top: 10px; left: 286px; width: 40px; font-size: 15px;
+          color: #ff9ec4; }
+  .sub { position: absolute; top: 36px; left: 0px; width: 336px; text-align: center;
+         font-size: 12px; color: #9c8f9b; }
+
+  /* 关于页是一个可滚动的文本页：<list> 的每一行固定 25px。
+     三种行样式高度完全一致（只改颜色），避免条目高度不一致导致排版错乱。 */
+  .lst { position: absolute; top: 58px; left: 0px; width: 336px; height: 366px; }
+  .item { width: 336px; height: 25px; }
+  .card { width: 336px; height: 25px; flex-direction: row; align-items: center;
+          padding-left: 14px; }
+  .r-p { width: 308px; font-size: 15px; color: #d9cdd6; lines: 1; }
+  .r-s { width: 308px; font-size: 15px; color: #ffb3cd; lines: 1; }
+  .r-g { width: 308px; font-size: 6px; color: #14101a; }
+
+  .back { position: absolute; top: 432px; left: 50px; width: 236px; height: 40px;
+          border-radius: 20px; background-color: #32243a;
+          align-items: center; justify-content: center; }
+  .btn-t { font-size: 19px; color: #ffffff; }
+
+  /* 彩蛋菜单 */
+  .mask { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px;
+          background-color: rgba(8, 6, 10, 0.72); }
+  .egg { position: absolute; top: 132px; left: 32px; width: 272px; height: 212px;
+         background-color: #241c2c; border-radius: 18px; flex-direction: column;
+         align-items: center; padding-top: 14px; }
+  .egg-t { font-size: 17px; color: #7ee8e0; margin-bottom: 12px; }
+  .egg-b { width: 216px; height: 40px; border-radius: 20px; background-color: #3a2b45;
+           align-items: center; justify-content: center; margin-bottom: 8px; }
+  .egg-c { background-color: #2a2033; margin-top: 4px; }
+  .egg-bt { font-size: 17px; color: #ffffff; }
+</style>
+
+<script>
+import router from '@system.router'
+import prompt from '@system.prompt'
+import { wrapText, markCleared, saveSeen } from '../../common/reader.js'
+import { CGG } from '../../common/cglist.js'
+
+// 显示在副标题里的版本号。必须和 src/manifest.json 的 versionName 一致，
+// tools/build.js 的构建前检查会核对，不一致直接拒绝构建。
+const APP_VER = '1.0.0'
+
+// 每一行的字符数。字号 15、可用宽 308 → floor(308/15)=20，取 20 保证不折行。
+const CPL = 20
+
+// 关于页正文。's' = 小节标题，'p' = 正文，'g' = 空行。
+// 这里写的是原始段落，具体断行交给 common/reader.js 的 wrapText()，
+// 和正文页共用同一套逻辑。
+const ABOUT = [
+  ['s', '故事梗概'],
+  ['p', '周六下午的咖啡馆，林默在平时「专属」的座位上，遇见了一个趴在桌上用平板画画的小女孩。'],
+  ['g', ''],
+  ['p', '她叫苏幼晴。看起来只是个初中生，实际上却是网上小有名气的画师兼主播「月染酱」。'],
+  ['g', ''],
+  ['p', '一支滚落到脚边的触控笔，让两个人第一次说上了话。'],
+  ['g', ''],
+  ['p', '从咖啡馆到漫展，从直播间到日常的一来一往——小小的身影，一点一点重叠进彼此的生活里。'],
+  ['g', ''],
+  ['s', '本移植版'],
+  ['p', '这是把原作《小小的身影，重叠的内心》移植到小米手环 9 Pro 上的个人版本。'],
+  ['g', ''],
+  ['p', '引擎与界面直接使用开源项目 galgod-band（MIT 协议），未作改动；本版本提供的是剧本、立绘、背景与 CG。'],
+  ['g', ''],
+  ['p', '全篇 2503 句对白、3 处分支选择，含真结局与一个「擦肩而过」的分支。'],
+  ['g', ''],
+  ['p', '结构上分为「本篇」与「后日谈」两部分。默认不提供章节选择，走完真结局之后，标题页才会出现「章节」按钮，可以自由选择重看本篇或后日谈。'],
+  ['g', ''],
+  ['p', '丝袜差分总共有三套：裸足、白丝、黑丝。剧情里会问到你的偏好，立绘和 CG 都会跟着变；CG 鉴赏里点开「丝袜差分」那一组，用底部的‹ ›可以把三套都翻出来看。'],
+  ['g', ''],
+  ['p', '操作：轻触推进对白，长按呼出阅读菜单。菜单里可以存档、读档、跳到下一章、切换自动/快速播放，也可以随时回到主页。'],
+  ['g', ''],
+  ['p', '在设置里可以无级调节正文字号与打字机速度，排版会按当前字号即时重排。'],
+  ['g', ''],
+  ['s', '版权信息'],
+  ['p', '本应用为非官方、非商业性的个人移植作品，与小米（Xiaomi）无关联，亦未获其授权或认可。'],
+  ['g', ''],
+  ['p', '剧本文字与全部美术资源（背景 / 立绘 / CG）版权归原作《小小的身影，重叠的内心》及其开发方所有。'],
+  ['g', ''],
+  ['p', '引擎与界面代码来自开源项目 galgod-band，版权归其作者所有，基于 MIT 协议使用。'],
+  ['g', ''],
+  ['p', '素材仅用于学习与交流，请勿用于任何商业用途。如有侵权，请联系删除。'],
+  ['g', ''],
+  ['s', '开源协议'],
+  ['p', 'galgod-band 的代码基于 MIT 协议开源，详见 galgod-band 仓库根目录的 LICENSE 文件。'],
+  ['g', ''],
+  ['p', 'Copyright (c) 2026 The GalGod Band Project Contributors'],
+]
+
+export default {
+  // 统一用 protected，不要用 data（两者不能共存，运行时会抛错）
+  protected: {
+    rows: [],
+    ver: APP_VER,
+    dots: '',
+    eggOpen: false
+  },
+
+  onInit() {
+    this.tapCount = 0
+    this.lastTap = 0
+    this.lockTap = 0
+    this.build()
+  },
+
+  build() {
+    const rows = []
+    for (let i = 0; i < ABOUT.length; i++) {
+      const kind = ABOUT[i][0]
+      const txt = ABOUT[i][1]
+      if (kind === 'g') { rows.push({ c: 'r-g', t: '' }); continue }
+      const cls = kind === 's' ? 'r-s' : 'r-p'
+      const parts = wrapText(txt, CPL)
+      for (let j = 0; j < parts.length; j++) rows.push({ c: cls, t: parts[j] })
+    }
+    this.rows = rows
+  },
+
+  ban() {},
+  lock() { this.lockTap = Date.now() },
+
+  // ---- 彩蛋：2 秒内连点「关于」7 次
+  tapTitle() {
+    const now = Date.now()
+    if (now - this.lastTap > 2000) this.tapCount = 0
+    this.lastTap = now
+    this.tapCount++
+    if (this.tapCount >= 7) {
+      this.tapCount = 0
+      this.dots = ''
+      this.eggOpen = true
+      return
+    }
+    // 从第 4 次开始给一点点提示，不然完全看不出有反应
+    const DOTS = ['', '·', '··', '···']
+    this.dots = this.tapCount >= 4 ? DOTS[Math.min(3, this.tapCount - 3)] : ''
+  },
+
+  closeEgg() { this.lock(); this.eggOpen = false },
+
+  // 解锁后日谈：写 cleared 标记，章节选择里就会出现「后日谈 · 诺提拉」
+  unlockAfter() {
+    this.lock()
+    this.eggOpen = false
+    markCleared(() => {
+      prompt.showToast({ message: '已解锁「后日谈 · 诺提拉」' })
+    })
+  },
+
+  // 解锁全部 CG：把 cglist.js 里所有出现过的图片下标一次写进 cgSeen
+  unlockCg() {
+    this.lock()
+    this.eggOpen = false
+    const all = []
+    for (let i = 0; i < CGG.length; i++) {
+      const im = CGG[i].im || []
+      for (let j = 0; j < im.length; j++) {
+        if (all.indexOf(im[j]) < 0) all.push(im[j])
+      }
+    }
+    saveSeen(all, () => {
+      prompt.showToast({ message: '已解锁全部 CG（' + all.length + ' 张）' })
+    })
+  },
+
+  back() { this.lock(); router.back() }
+}
+</script>

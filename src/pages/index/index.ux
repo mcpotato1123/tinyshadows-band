@@ -1,0 +1,102 @@
+<template>
+  <div class="page" onswipe="ban">
+    <image class="bg" src="/common/home.png"></image>
+    <div class="shade"></div>
+
+    <div class="head">
+      <image class="logo" src="/common/logo.png"></image>
+    </div>
+
+    <div class="panel">
+      <text class="resume" if="{{hasAuto}}">最近进度 · {{autoText}}</text>
+      <text class="resume" if="{{!hasAuto}}">还没有存档，从序章开始吧</text>
+
+      <div class="btn btn-main" onclick="start" onswipe="ban"><text class="btn-t">开始阅读</text></div>
+      <div class="btn" if="{{hasAuto}}" onclick="resume" onswipe="ban"><text class="btn-t">继续阅读</text></div>
+
+      <div class="row">
+        <div class="btn btn-5" onclick="openSaves" onswipe="ban"><text class="btn-ts">存档</text></div>
+        <div class="btn btn-5" if="{{cleared}}" onclick="openChapters" onswipe="ban"><text class="btn-ts">章节</text></div>
+        <div class="btn btn-5" onclick="openCg" onswipe="ban"><text class="btn-ts">CG</text></div>
+        <div class="btn btn-5" onclick="openSettings" onswipe="ban"><text class="btn-ts">设置</text></div>
+        <div class="btn btn-5" onclick="openAbout" onswipe="ban"><text class="btn-ts">关于</text></div>
+      </div>
+      <div class="btn btn-quit" onclick="quit" onswipe="ban"><text class="btn-t">退出</text></div>
+    </div>
+  </div>
+</template>
+
+<style>
+  .page { width: 336px; height: 480px; background-color: #0d0910; position: relative; }
+  .bg { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; object-fit: cover; }
+  /* 压暗层：用 rgba 背景色而不是 opacity——opacity 会让运行时把整棵子树离屏合成，
+     在手环固件上会把带子节点的容器渲染成横向条纹 */
+  .shade { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px;
+           background-color: rgba(13, 9, 16, 0.34); }
+
+  /* 标题用原作的大 logo 图（custom/LOGO_white.png）。
+     galgod 2.3 把这里的文字删掉了、改用自带 home.png 的完整构图；
+     本作不改原作的标题画，所以放一个 head 容器贴 logo。 */
+  .head { position: absolute; top: 54px; left: 0px; width: 336px;
+          flex-direction: column; align-items: center; }
+  .logo { width: 288px; height: 144px; }
+
+  .panel { position: absolute; top: 240px; left: 0px; width: 336px; height: 240px;
+           background-color: rgba(21, 15, 25, 0.94); flex-direction: column;
+           align-items: center; padding-top: 12px; }
+  .resume { font-size: 15px; color: #b9a7b3; margin-bottom: 8px; }
+
+  .btn { width: 236px; height: 40px; border-radius: 20px; background-color: #32243a;
+         align-items: center; justify-content: center; margin-bottom: 8px; }
+  .btn-main { background-color: #b95079; }
+  .btn-quit { background-color: #241a2b; }
+  .btn-t { font-size: 19px; color: #ffffff; }
+  /* 5 个小按钮专用：236/5 ≈ 46px，字号 16 才放得下「设置」「关于」这种两字标签。
+     不能直接改 .btn-t，那样会连带把「开始阅读」等主按钮的字号也缩小。 */
+  .btn-ts { font-size: 16px; color: #ffffff; }
+  .row { width: 236px; flex-direction: row; justify-content: space-between; }
+  .btn-half { width: 114px; }
+  .btn-third { width: 74px; }
+  .btn-quarter { width: 54px; }
+  .btn-5 { width: 46px; }
+</style>
+
+<script>
+import router from '@system.router'
+import { loadAutoSave, loadCleared } from '../../common/reader.js'
+
+export default {
+  // 统一用 protected，不要用 data（两者不能共存，会抛错）
+  protected: {
+    hasAuto: false,
+    autoText: '',
+    cleared: false
+  },
+
+  onInit() { this.refresh() },
+  onShow() { this.refresh() },
+
+  refresh() {
+    loadCleared((ok) => { this.cleared = ok })
+    loadAutoSave((d) => {
+      if (!d || d.magic !== 'galgod-band-1' || !d.pc) {
+        this.hasAuto = false
+        this.autoText = ''
+        return
+      }
+      this.autoText = (d.chapter === 1 ? '后日谈' : '本篇')
+      this.hasAuto = true
+    })
+  },
+
+  ban() {},
+  start() { router.push({ uri: 'pages/game' }) },
+  resume() { router.push({ uri: 'pages/game', params: { auto: '1' } }) },
+  openSaves() { router.push({ uri: 'pages/saves', params: { mode: 'load' } }) },
+  openChapters() { router.push({ uri: 'pages/chapters' }) },
+  openCg() { router.push({ uri: 'pages/cg' }) },
+  openSettings() { router.push({ uri: 'pages/settings' }) },
+  openAbout() { router.push({ uri: 'pages/about' }) },
+  quit() { this.$app.exit() }
+}
+</script>
