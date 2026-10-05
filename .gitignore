@@ -16,20 +16,3 @@ __pycache__/
 # 编辑器 / 系统
 .DS_Store
 Thumbs.db
-
-# ---------------------------------------------------------------- 版权素材
-# 下面这些是 PC 版《小小的身影，重叠的内心》的**剧本与美术资源**，
-# 版权归原作及其开发方所有，不在 galgod-band 的 MIT 协议范围内。
-# 所以默认**不进仓库**——克隆下来的是「引擎 + 转换工具」，
-# 想跑起来需要自备原作、再用 tools/storygen/ 的流水线自己生成一遍。
-#
-# 如果你确认有权分发（例如私有仓库、或已获得授权），
-# 把下面这几行注释掉再 add 即可，详见 PUSH.md。
-src/common/story/
-src/common/img/
-src/common/home.png
-src/common/logo.png
-src/common/icon.png
-# 由上面的素材生成的索引表，属于构建产物
-src/common/assets.js
-src/common/cglist.js
