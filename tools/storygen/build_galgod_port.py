@@ -952,7 +952,7 @@ def main():
     # 2.3 对它们的改动**仅限**常亮，所以整份拿来就等于
     # 「2.2 + 常亮」，不必在 2.2 上去手改一堆坐标。
     ap.add_argument("--keepon-ref", default="galgod-band-23")
-    ap.add_argument("--out", default="galgod-port")
+    ap.add_argument("--out", default="tinyshadows-band")
     ap.add_argument("--rpyc", default="原始解包/scripts_rpa/scripts/content")
     ap.add_argument("--syq", default="原始解包/scripts_rpa/scripts/roles/syq.rpyc")
     ap.add_argument("--fg", default="原始解包/images_rpa/images/fg")

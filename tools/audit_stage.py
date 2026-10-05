@@ -45,7 +45,7 @@ def short(img, cs):
 
 
 def main():
-    proj = sys.argv[1] if len(sys.argv) > 1 else "galgod-port"
+    proj = sys.argv[1] if len(sys.argv) > 1 else "tinyshadows-band"
     nodes, img = load(proj)
 
     bg, cg, cs = -1, -1, []

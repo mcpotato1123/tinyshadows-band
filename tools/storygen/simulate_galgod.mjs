@@ -8,7 +8,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const root = process.argv[2] || 'galgod-port'
+const root = process.argv[2] || 'tinyshadows-band'
 const SRC = path.join(root, 'src')
 
 // ---- 载入 assets.js（把 export const X = 换成普通赋值后求值）

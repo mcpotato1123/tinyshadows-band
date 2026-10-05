@@ -1,6 +1,6 @@
 """按 game.ux 的 CSS 几何渲染界面预览图（真机之外能拿到的最接近的效果）。
 
-它复刻的是 galgod-port/src/pages/game/game.ux 里 <style> 的数值，
+它复刻的是 tinyshadows-band/src/pages/game/game.ux 里 <style> 的数值，
 分页用 common/reader.js 的同一套规则（每行字数 = 正文框宽 / 字号，
 断行优先落在标点之后），字体用系统里自带的微软雅黑近似原版思源黑体。
 
@@ -250,7 +250,7 @@ def render_title(src, cleared, has_auto):
 
 
 def main():
-    proj = sys.argv[1] if len(sys.argv) > 1 else "galgod-port"
+    proj = sys.argv[1] if len(sys.argv) > 1 else "tinyshadows-band"
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(proj, "preview")
     os.makedirs(out, exist_ok=True)
     src, img, idx, nodes = load_project(proj)

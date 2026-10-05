@@ -6,7 +6,7 @@
 先看一眼现状：
 
 ```bash
-cd galgod-port
+cd tinyshadows-band
 git log --oneline          # f382ff0 移植《小小的身影，重叠的内心》到小米手环 9 Pro
 git status                 # 干净
 ```
@@ -52,7 +52,7 @@ git status                 # 干净
 5. 推送：
 
 ```bash
-cd galgod-port
+cd tinyshadows-band
 git remote add origin https://github.com/<你的用户名>/<仓库名>.git
 git push -u origin main
 # 用户名填 GitHub 用户名，密码填 PAT
@@ -72,7 +72,7 @@ git push -u origin main
 - **私有仓库不要走这条**（gh-proxy 自己也这么警告）。
 
 ```bash
-cd galgod-port
+cd tinyshadows-band
 git remote add proxy https://ghproxy.net/https://github.com/<你的用户名>/<仓库名>.git
 git push proxy main
 ```
@@ -85,8 +85,8 @@ git push proxy main
 
 ```bash
 # 在能访问 GitHub 的机器上
-git clone tinyshadows-band.bundle galgod-port
-cd galgod-port
+git clone tinyshadows-band.bundle tinyshadows-band
+cd tinyshadows-band
 git remote set-url origin https://github.com/<你的用户名>/<仓库名>.git
 git push -u origin main
 ```
