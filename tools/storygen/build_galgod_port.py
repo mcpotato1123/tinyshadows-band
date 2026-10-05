@@ -41,10 +41,8 @@ CHUNK = 128
 VER = "1.0.0"
 APP_NAME = "小小的身影，重叠的内心"
 W, H = 336, 480                 # 小米手环 9 Pro 屏幕（designWidth 336 → 1px = 1 物理像素）
-# CG 按完整 16:9 出图（854x480），比屏幕宽 —— 这样鉴赏里能按住左右拖动看全图，
-# 对应 galgod 2.3 的 cg.ux（它的 CG_W 就是 854）。之前裁成 336x480 会丢掉
-# 左右各 30% 的画面，主体偏一点就被裁没了。
-CG_W, CG_H = 854, 480
+# CG 按屏幕尺寸出图（336x480）。原作 CG 是 16:9 的宽图，这里做居中裁切。
+# （曾经出过 854x480 的完整 16:9 配拖动查看，后来去掉了滑动，就一并回到屏幕尺寸。）
 LOGO_W = 288                    # 标题页 logo 的显示宽度
 SPRITE_W, SPRITE_H = 143, 380   # game.ux 里 .sp 的槽位尺寸
 # 立绘取景：以脸为中心，脸顶距画面上沿的比例
@@ -175,24 +173,14 @@ def patch_pages(dst_pages, ver):
     if os.path.exists(p):
         s = open(p, encoding="utf-8").read()
         s = sub(s, 
-            '    <div class="shade"></div>\n',
-            '    <div class="shade"></div>\n\n'
-            '    <div class="head">\n'
-            '      <image class="logo" src="/common/logo.png"></image>\n'
-            '    </div>\n',
-            "标题-插入logo块")
-        # galgod 2.3 把标题文字删了（它改用自带 home.png 的完整构图）。
-        # 本作要贴自己的大 logo，所以在这里补回 head / logo 的样式。
+            '      <text class="title">GalGod</text>\n'
+            '      <text class="sub">想成为Galgame领域大神！！！</text>\n',
+            '      <image class="logo" src="/common/logo.png"></image>\n',
+            "标题-换成logo图")
+        # 标题文字样式换成 logo 图的尺寸
         s = sub(s, 
-            '  /* 主页顶部的 "GalGod" + 副标题文字已删掉：\n'
-            '     现在 home.png 里就是原图那张「logo 在左、女孩在右」的完整构图，\n'
-            '     再叠一行文字会把它盖住、而且内容重复。 */',
-            '  /* 标题用原作的大 logo 图（custom/LOGO_white.png）。\n'
-            '     galgod 2.3 把这里的文字删掉了、改用自带 home.png 的完整构图；\n'
-            '     本作不改原作的标题画，所以放一个 head 容器贴 logo。 */\n'
-            '  .head { position: absolute; top: 54px; left: 0px; width: 336px;\n'
-            '          flex-direction: column; align-items: center; }\n'
-            '  .logo { width: %dpx; height: %dpx; }'
+            "  .sub { font-size: 17px; color: #d6bcc8; margin-top: 6px; }",
+            "  .logo { width: %dpx; height: %dpx; }"
             % (LOGO_W, int(round(LOGO_W * 1527 / 3059))),
             "标题-logo样式")
         # 原作只有本篇与后日谈，所以默认不给章节选择：
@@ -285,33 +273,8 @@ def patch_pages(dst_pages, ver):
                           "      const ok = this.anySeen(g)")
             s = sub(s, "    if (!this.seen[g.u]) {",
                           "    if (!this.anySeen(g)) {")
-
-        # 打开一张 CG 时从中间开始看。
-        # galgod 这里写的是 `setPan(CG_PAN_RANGE / 2)`，是**正数**，
-        # 而 setPan() 第一句就是 `if (l > 0) l = 0` —— 于是永远被夹到最左边。
-        # 后果是 canLeft 恒为 false（左侧点击热区不出现）、往右拖也纹丝不动，
-        # 一半的画面拖不出来。按它自己注释的意思（「每张 CG 都从中间开始看」）
-        # 应该是负的一半。
-        if "setPan(-CG_PAN_RANGE / 2)" not in s:
-            s = sub(s, "    this.setPan(CG_PAN_RANGE / 2)",
-                    "    // 负的一半：setPan() 会把正数夹成 0（=最左边），\n"
-                    "    // 那样只能往一个方向拖\n"
-                    "    this.setPan(-CG_PAN_RANGE / 2)",
-                    "CG-起始居中")
-
-        # .page 补上 overflow: hidden。.big 是 854 宽、比屏幕宽一倍多，
-        # galgod 在 game.ux 里为同样的宽子节点专门加过这个：不裁住的话
-        # 运行时会把这个页面当成「内容比视口宽」的横向可滚动区域，
-        # 玩家的拖动会去滚整个页面、和 left 打架。
-        if "overflow: hidden; }" not in s.split(".viewer")[0]:
-            s = sub(s, "  .page { width: 336px; height: 480px; "
-                       "background-color: #14101a; position: relative; }",
-                    "  .page { width: 336px; height: 480px; "
-                    "background-color: #14101a; position: relative;\n"
-                    "          /* .big 有 854 宽，比屏幕宽一倍多。不裁住的话运行时\n"
-                    "             会当成横向可滚动页面，拖动会和 left 打架 */\n"
-                    "          overflow: hidden; }",
-                    "CG-页面裁切")
+        # 本作**不再给 cg.ux 打任何补丁**：鉴赏页就是 galgod 2.2 的原版——
+        # 列表 + 大图 + 底部 ‹ n/N › 翻差分，没有拖动/滑动那一套。
         if "cg" not in done:
             done.append("cg")
         open(p, "w", encoding="utf-8").write(s)
@@ -983,9 +946,12 @@ def prune(nodes, marks):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ref", default="galgod-band-23")
-    ap.add_argument("--no-pan-ref", default="galgod-band-ref",
-                    help="game.ux 取这一份（不使用全景背景的那版）")
+    ap.add_argument("--ref", default="galgod-band-ref")
+    # 只从 2.3 取这三样：屏幕常亮跨了
+    # manifest / reader.js / settings.ux 三个文件。
+    # 2.3 对它们的改动**仅限**常亮，所以整份拿来就等于
+    # 「2.2 + 常亮」，不必在 2.2 上去手改一堆坐标。
+    ap.add_argument("--keepon-ref", default="galgod-band-23")
     ap.add_argument("--out", default="galgod-port")
     ap.add_argument("--rpyc", default="原始解包/scripts_rpa/scripts/content")
     ap.add_argument("--syq", default="原始解包/scripts_rpa/scripts/roles/syq.rpyc")
@@ -1020,15 +986,25 @@ def main():
     os.makedirs(common, exist_ok=True)
     shutil.copy2(os.path.join(src, "common", "reader.js"),
                  os.path.join(common, "reader.js"))
-    # game.ux 例外：本作明确不要 galgod 2.3 的「全景背景」（一张 672 宽的背景图，
-    # 用定时器小步平移 left 来回扫）。所以这一页仍然用 2.2 的版本，
-    # 再单独把 2.3 的「屏幕常亮」补丁打上去（见 patch_pages）。
-    # 2.3 的 game.ux 相对 2.2 只有这两处改动，所以这个组合 == 2.3 去掉全景。
-    old_game = os.path.join(args.no_pan_ref, "src", "pages", "game", "game.ux")
-    if os.path.exists(old_game):
-        shutil.copy2(old_game, os.path.join(dst, "pages", "game", "game.ux"))
-    print("[1/5] 复制 galgod %s 引擎与页面（7 个页面 + reader.js）"
-          % os.path.basename(os.path.normpath(args.ref)))
+
+    # 屏幕常亮是 2.3 才有的，而它跨了三个文件：manifest 要声明 system.brightness、
+    # reader.js 要有 keepOn 这个设置项、settings.ux 要有对应的开关和行距。
+    # 2.3 对这三个文件的改动**仅限**常亮，所以整份拿过来即可，不必在 2.2 上
+    # 手改一堆滑块坐标。其余一切（含 game.ux）都用 2.2 的。
+    copied = []
+    kon = os.path.join(args.keepon_ref, "src")
+    if os.path.isdir(kon):
+        for rel in ("manifest.json", "common/reader.js",
+                    "pages/settings/settings.ux"):
+            s2 = os.path.join(kon, rel.replace("/", os.sep))
+            if os.path.exists(s2):
+                shutil.copy2(s2, os.path.join(dst, rel.replace("/", os.sep)))
+                copied.append(rel)
+    print("[1/5] 复制 galgod %s 引擎与页面（7 个页面 + reader.js）；"
+          "另从 %s 取屏幕常亮：%s"
+          % (os.path.basename(os.path.normpath(args.ref)),
+             os.path.basename(os.path.normpath(args.keepon_ref)),
+             "、".join(copied) if copied else "（没找到）"))
 
     # ---- 2. 素材
     # 先把剧本读出来（只走 AST、不需要资源下标），这样才能知道要用到哪些立绘。
@@ -1065,7 +1041,7 @@ def main():
 
     for sub, src_dir, names, (tw, th) in (
             ("b", args.bg_src, bgs, (W, H)),
-            ("c", args.cg_src, cgs, (CG_W, CG_H))):
+            ("c", args.cg_src, cgs, (W, H))):
         d = os.path.join(common, "img", sub)
         if os.path.isdir(d):
             shutil.rmtree(d)

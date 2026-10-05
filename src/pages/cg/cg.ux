@@ -1,7 +1,5 @@
 <template>
-  <!-- 根节点不挂 onswipe：那会把手势整个吃掉（2.3.1 上 CG 拖不动就是这个）。
-       需要接住滑动的那张图自己挂。 -->
-  <div class="page">
+  <div class="page" onswipe="ban">
     <text class="title">CG 鉴赏</text>
     <text class="sub">已解锁 {{openCount}} / {{total}} 组 · 点按查看</text>
 
@@ -20,40 +18,13 @@
 
     <div class="back" onclick="back" onswipe="ban"><text class="btn-t">返回</text></div>
 
-    <!-- 大图查看
-         CG 是一张完整 16:9 的宽图（854×480），比屏幕宽得多。
-         显示时靠 **touchmove 连续拖动** left 来看被裁掉的部分 ——
-         拖动是连续跟随手指的，不是一格一格跳。
-
-         ⚠️ .big 必须显式写 object-fit，否则 Vela 的 <image> 会按**原始尺寸**画，
-            结果只占屏幕左边一块、右边全黑（2.3.3 上就是这个现象）。
-
-         另外两条手势同时挂着做兜底：onswipe 与左右点击热区。
-         万一 touchmove 在某些固件上不派发，也还能看全图。 -->
+    <!-- 大图查看 -->
     <div class="viewer" if="{{viewing}}">
-      <image class="big" style="{{cgStyle}}" src="{{bigSrc}}"
-             ontouchstart="onCgTouchStart" ontouchmove="onCgTouchMove"
-             ontouchend="onCgTouchEnd" ontouchcancel="onCgTouchEnd"
-             onswipe="onPanSwipe"></image>
-
-      <div class="tapzone zl" if="{{canLeft}}" onclick="panPrev" onswipe="ban"></div>
-      <div class="tapzone zr" if="{{canRight}}" onclick="panNext" onswipe="ban"></div>
-
-      <div class="vtop">
-        <text class="vname">{{vName}}</text>
-        <text class="vnum">{{pageNo}} / {{pageAll}}</text>
-      </div>
-
+      <image class="big" src="{{bigSrc}}" onswipe="ban"></image>
       <div class="vclose" onclick="closeView" onswipe="ban"><text class="vclose-t">关闭</text></div>
-
-      <text class="vhint2">按住画面左右拖动，看被裁掉的部分</text>
-      <!-- 位置指示：滑块宽度 = 屏幕宽/图宽，位置 = 当前看到哪一段。
-           既是给玩家的反馈，也是在"拖不动"时能一眼看出卡在哪儿的诊断手段。 -->
-      <div class="track"><div class="thumb2" style="{{indStyle}}"></div></div>
-
-      <div class="vbar" if="{{pageAll > 1}}">
+      <div class="vbar">
         <div class="vbtn" onclick="prev" onswipe="ban"><text class="vbtn-t">‹</text></div>
-        <text class="vhint">换一张差分</text>
+        <text class="vnum">{{pageNo}} / {{pageAll}}</text>
         <div class="vbtn" onclick="next" onswipe="ban"><text class="vbtn-t">›</text></div>
       </div>
     </div>
@@ -61,10 +32,7 @@
 </template>
 
 <style>
-  .page { width: 336px; height: 480px; background-color: #14101a; position: relative;
-          /* .big 有 854 宽，比屏幕宽一倍多。不裁住的话运行时
-             会当成横向可滚动页面，拖动会和 left 打架 */
-          overflow: hidden; }
+  .page { width: 336px; height: 480px; background-color: #14101a; position: relative; }
   .title { position: absolute; top: 12px; left: 0px; width: 336px; text-align: center;
            font-size: 24px; color: #ffd8e6; font-weight: bold; }
   .sub { position: absolute; top: 44px; left: 0px; width: 336px; text-align: center;
@@ -76,9 +44,7 @@
   .card { width: 312px; height: 74px; margin-left: 12px; margin-top: 6px; border-radius: 16px;
           background-color: #241c2c; flex-direction: row; align-items: center;
           padding-left: 10px; padding-right: 14px; }
-  /* object-fit 是防呆：Vela 的 <image> 默认按原始像素尺寸画，
-     源图尺寸万一和框不一致就会只占一块。现在两者都是 96x54，写上是保险。 */
-  .thumb { width: 96px; height: 54px; border-radius: 8px; object-fit: cover; }
+  .thumb { width: 96px; height: 54px; border-radius: 8px; }
   .lock { width: 96px; height: 54px; border-radius: 8px; background-color: #191320;
           align-items: center; justify-content: center; }
   .lock-t { font-size: 26px; color: #4c4055; }
@@ -90,47 +56,21 @@
           align-items: center; justify-content: center; }
   .btn-t { font-size: 19px; color: #ffffff; }
 
-  /* overflow:hidden 让比屏幕宽的图被裁在这个框里，靠 left 决定看哪一段 */
   .viewer { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px;
-            background-color: #000000; overflow: hidden; }
-  /* width 必须等于 tools/gen_assets.py 的 CG_W，npm run test 会核对。
-     object-fit 也必须写 —— 不写的话 Vela 按原始尺寸画，只会占左边一块。 */
-  .big { position: absolute; top: 0px; left: 0px; width: 854px; height: 480px;
-         object-fit: fill; }
-
-  /* 点击翻页的保底热区：只占左右窄条，避开顶栏和底栏 */
-  .tapzone { position: absolute; top: 56px; width: 48px; height: 336px; }
-  .zl { left: 0px; }
-  .zr { left: 288px; }
-
-  .vtop { position: absolute; top: 10px; left: 0px; width: 336px; flex-direction: row;
-          align-items: center; padding-left: 14px; padding-right: 88px; }
-  .vname { font-size: 16px; color: #ffe6ef; lines: 1; }
-  .vnum { font-size: 15px; color: #d8cbd2; }
-
+            background-color: #000000; }
+  .big { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; object-fit: cover; }
   .vclose { position: absolute; top: 10px; left: 262px; width: 64px; height: 34px;
             border-radius: 17px; background-color: rgba(0, 0, 0, 0.62);
             align-items: center; justify-content: center; }
   .vclose-t { font-size: 17px; color: #ffe6ef; }
-
-  /* 提示放在底栏上方，别和底栏重叠（2.3.3 上 top:424 撞上了 top:428 的底栏） */
-  .vhint2 { position: absolute; top: 392px; left: 0px; width: 336px; text-align: center;
-            font-size: 13px; color: rgba(226, 214, 224, 0.78); }
-
-  /* 位置指示条：轨道 240 宽，滑块宽度按 屏幕宽/图宽 算（336/854 ≈ 94） */
-  .track { position: absolute; top: 412px; left: 48px; width: 240px; height: 5px;
-           border-radius: 3px; background-color: rgba(255, 255, 255, 0.22); }
-  .thumb2 { position: absolute; top: 0px; left: 0px; width: 94px; height: 5px;
-            border-radius: 3px; background-color: #ffd8e6; }
-
-  .vbar { position: absolute; top: 428px; left: 22px; width: 292px; height: 42px;
+  .vbar { position: absolute; top: 428px; left: 88px; width: 160px; height: 42px;
           border-radius: 21px; background-color: rgba(0, 0, 0, 0.62);
           flex-direction: row; align-items: center; justify-content: space-between;
           padding-left: 6px; padding-right: 6px; }
   .vbtn { width: 46px; height: 34px; border-radius: 17px; background-color: #32243a;
           align-items: center; justify-content: center; }
   .vbtn-t { font-size: 22px; color: #ffffff; }
-  .vhint { font-size: 14px; color: rgba(226, 214, 224, 0.8); }
+  .vnum { font-size: 16px; color: #d8cbd2; }
 </style>
 
 <script>
@@ -140,44 +80,6 @@ import { CGG } from '../../common/cglist.js'
 import { IMG } from '../../common/assets.js'
 import { loadSeen } from '../../common/reader.js'
 
-// CG 素材宽度，必须与 tools/gen_assets.py 的 CG_W 一致（npm run test 会核对）
-const CG_W = 854
-const CG_PAN_RANGE = CG_W - 336        // 可拖动的总距离
-const CG_PAN_STEP = Math.round(CG_PAN_RANGE / 3)   // 点击/滑动兜底时一次走多远
-
-// 拖动放大倍数。
-// 屏幕上手指的**实际可用行程**才是分母：从屏幕中间起手，最多只能挪到边缘，
-// 也就是 336/2 = 168px，不是整个屏宽。而可拖范围是 518px。
-// 所以要 518/168 ≈ 3.1 才能一次划到底。
-//
-// 之前用 1.8（按"整屏 336"算的），一次只能走 302px = 58%，
-// 真机上就表现为「只能拖一半」。这个 168 是很容易算错的地方。
-const CG_DRAG_GAIN = 3.2
-
-// 触摸事件的坐标字段各版本不统一，挨个试。
-// Vela 的 commonEvents 里有 touchstart/touchmove/touchend，但字段名没有文档。
-function readX(e) {
-  if (!e) return null
-  let p = null
-  if (e.touches && e.touches.length) p = e.touches[0]
-  else if (e.changedTouches && e.changedTouches.length) p = e.changedTouches[0]
-  else p = e
-  if (!p) return null
-  if (typeof p.clientX === 'number') return p.clientX
-  if (typeof p.pageX === 'number') return p.pageX
-  if (typeof p.x === 'number') return p.x
-  if (typeof p.offsetX === 'number') return p.offsetX
-  return null
-}
-
-function readDir(e) {
-  if (!e) return ''
-  if (typeof e.direction === 'string') return e.direction
-  if (e.detail && typeof e.detail.direction === 'string') return e.detail.direction
-  if (e.target && typeof e.target.direction === 'string') return e.target.direction
-  return ''
-}
-
 export default {
   // 统一用 protected，不要用 data（两者不能共存，运行时会抛错）
   protected: {
@@ -186,11 +88,6 @@ export default {
     total: 0,
     viewing: false,
     bigSrc: '',
-    cgStyle: 'left: 0px;',
-    indStyle: 'left: 0px;',
-    canLeft: false,
-    canRight: true,
-    vName: '',
     pageNo: 1,
     pageAll: 1
   },
@@ -200,9 +97,6 @@ export default {
     this.groups = CGG || []
     this.curGroup = -1
     this.curPage = 0
-    this.cgLeft = 0
-    this.touchX = null
-    this.touchLeft = 0
     this.lockTap = 0
     loadSeen((list) => {
       for (let i = 0; i < list.length; i++) this.seen[list[i]] = 1
@@ -252,8 +146,6 @@ export default {
     }
     this.curGroup = i
     this.curPage = 0
-    this.vName = g.n
-    this.pageAll = g.im.length
     this.showPage()
     this.viewing = true
   },
@@ -261,56 +153,11 @@ export default {
   showPage() {
     const g = this.groups[this.curGroup]
     if (!g) return
-    this.bigSrc = IMG[g.im[this.curPage]] || ''
+    const idx = g.im[this.curPage]
+    this.bigSrc = IMG[idx] || ''
     this.pageNo = this.curPage + 1
-    // 每张 CG 都从中间开始看 —— 这是最常见的构图，两侧按需拖出来
-    // 负的一半：setPan() 会把正数夹成 0（=最左边），
-    // 那样只能往一个方向拖
-    this.setPan(-CG_PAN_RANGE / 2)
+    this.pageAll = g.im.length
   },
-
-  setPan(v) {
-    let l = v
-    if (l > 0) l = 0
-    if (l < -CG_PAN_RANGE) l = -CG_PAN_RANGE
-    l = Math.round(l)
-    this.cgLeft = l
-    this.cgStyle = 'left: ' + l + 'px;'
-    this.canLeft = l < -2
-    this.canRight = l > -CG_PAN_RANGE + 2
-    // 指示条：0 表示看到最左，1 表示看到最右
-    const ratio = CG_PAN_RANGE > 0 ? (-l / CG_PAN_RANGE) : 0
-    this.indStyle = 'left: ' + Math.round((240 - 94) * ratio) + 'px;'
-  },
-
-  // ---- 连续拖动：left 跟着手指走，不是一格一格跳
-  onCgTouchStart(e) {
-    const x = readX(e)
-    if (x === null) return
-    this.touchX = x
-    this.touchLeft = this.cgLeft
-  },
-
-  onCgTouchMove(e) {
-    if (this.touchX === null) return
-    const x = readX(e)
-    if (x === null) return
-    // 乘上 CG_DRAG_GAIN：屏幕太窄，1:1 跟手一次拖不完整个范围
-    this.setPan(this.touchLeft + (x - this.touchX) * CG_DRAG_GAIN)
-  },
-
-  onCgTouchEnd() { this.touchX = null },
-
-  // ---- 兜底一：滑动
-  onPanSwipe(e) {
-    const dir = readDir(e)
-    if (dir === 'left') this.setPan(this.cgLeft - CG_PAN_STEP)      // 往左滑 = 看右边
-    else if (dir === 'right') this.setPan(this.cgLeft + CG_PAN_STEP)
-  },
-
-  // ---- 兜底二：点左右两侧
-  panPrev() { this.lock(); this.setPan(this.cgLeft + CG_PAN_STEP) },
-  panNext() { this.lock(); this.setPan(this.cgLeft - CG_PAN_STEP) },
 
   prev() {
     this.lock()
@@ -328,12 +175,7 @@ export default {
     this.showPage()
   },
 
-  closeView() {
-    this.lock()
-    this.viewing = false
-    this.bigSrc = ''
-    this.vName = ''
-  },
+  closeView() { this.lock(); this.viewing = false; this.bigSrc = '' },
 
   back() { router.back() }
 }

@@ -11,7 +11,6 @@
     "test": "node tools/test_paginate.js",
     "check": "npm run validate && npm test",
     "preview": "python tools/preview_port.py .",
-    "preview:cg": "python tools/preview_cg_viewer.py .",
     "audit": "python tools/audit_stage.py .",
     "verify": "python tools/check_encoding.py .",
     "gen": "python tools/storygen/build_galgod_port.py"

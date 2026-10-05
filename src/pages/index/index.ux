@@ -34,11 +34,8 @@
   .shade { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px;
            background-color: rgba(13, 9, 16, 0.34); }
 
-  /* 标题用原作的大 logo 图（custom/LOGO_white.png）。
-     galgod 2.3 把这里的文字删掉了、改用自带 home.png 的完整构图；
-     本作不改原作的标题画，所以放一个 head 容器贴 logo。 */
-  .head { position: absolute; top: 54px; left: 0px; width: 336px;
-          flex-direction: column; align-items: center; }
+  .head { position: absolute; top: 54px; left: 0px; width: 336px; flex-direction: column; align-items: center; }
+  .title { font-size: 46px; color: #ffe9f1; font-weight: bold; }
   .logo { width: 288px; height: 144px; }
 
   .panel { position: absolute; top: 240px; left: 0px; width: 336px; height: 240px;
