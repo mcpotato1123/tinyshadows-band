@@ -150,8 +150,11 @@ def render(src, img, idx, node, chapter, progress, state):
     blend(page, (12, 10, 12 + 10 + tw + 8 + pw + 10, 10 + 26), 13, (0, 0, 0, 140))
     d.text((22, 13), chapter, font=ft, fill=(255, 230, 239, 255))
     d.text((22 + tw + 8, 15), progress, font=fp, fill=(185, 176, 182, 255))
-    blend(page, (290, 8, 290 + 36, 8 + 36), 18, (27, 21, 32, 209))
-    d.text((304, 8), "≡", font=font(24), fill=(255, 216, 230, 255))
+    # 右上角的 ≡ 菜单按钮：galgod 2.5 起**隐藏了**（改成下滑打开菜单，
+    # game.ux 里那行的 if 被写成 {{false}}，代码还留着）。所以这里不画。
+    # 想恢复按钮的话，把下面两行取消注释即可。
+    # blend(page, (278, 6, 278 + 52, 6 + 52), 26, (27, 21, 32, 209))
+    # d.text((304, 20), "≡", font=font(30), fill=(255, 216, 230, 255))
 
     if node["t"] == "o":
         y = 96

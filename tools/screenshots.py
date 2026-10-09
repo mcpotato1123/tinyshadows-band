@@ -148,28 +148,65 @@ def _pill(page, d, x, y, text, on):
 
 
 def page_settings(src):
+    """2.5.2 的设置页：3 行滑块 + 2 行开关（屏幕常亮 / 长按屏幕）。"""
     page = Image.new("RGBA", (W, H), (20, 16, 26, 255))
     d = ImageDraw.Draw(page, "RGBA")
     d.text((W // 2, 4), "设置", font=P.font(21, True), fill=(255, 216, 230), anchor="ma")
     _row(page, d, 34, "字体大小", "20", 0.42)
     _row(page, d, 98, "播放速度", "28", 0.23)
-    _row(page, d, 162, "自动播放", "关闭", 0.0)
-    d.text((14, 226), "快速播放", font=P.font(16), fill=(207, 194, 203))
-    _pill(page, d, 228, 224, "关", False)
-    _pill(page, d, 278, 224, "开", True)
-    d.text((14, 260), "屏幕常亮", font=P.font(16), fill=(207, 194, 203))
-    _pill(page, d, 228, 258, "关", False)
-    _pill(page, d, 278, 258, "开", True)
-    d.text((14, 292), "字号改动会立刻重排正文，60 字一页", font=P.font(12),
+    _row(page, d, 162, "自动播放速度", "关闭", 0.0)
+    d.text((14, 228), "屏幕常亮", font=P.font(16), fill=(207, 194, 203))
+    _pill(page, d, 228, 226, "关", False)
+    _pill(page, d, 278, 226, "开", True)
+    d.text((14, 262), "长按屏幕", font=P.font(16), fill=(207, 194, 203))
+    # 三选一：隐藏 / 快进 / 关闭 —— 整行左移（.lprow left:180）
+    _pill(page, d, 180, 260, "隐藏", False)
+    _pill(page, d, 230, 260, "快进", True)
+    _pill(page, d, 280, 260, "关闭", False)
+    d.text((14, 296), "字号 14~30 px，显示的数字就是 px", font=P.font(12), fill=(139, 127, 137))
+    d.text((14, 310), "播放速度＝每字毫秒；自动播放＝每句停留毫秒", font=P.font(12),
            fill=(139, 127, 137))
-    d.text((14, 306), "滑块不生效时可用 −／＋ 调节", font=P.font(12), fill=(139, 127, 137))
-    P.blend(page, (12, 322, 324, 424), 14, (26, 20, 32, 255))
-    d.text((168, 330), "预览", font=P.font(13), fill=(156, 143, 155), anchor="ma")
-    d.text((26, 352), "她正专注地在眼前的平板上", font=P.font(20), fill=(233, 224, 230))
-    d.text((26, 380), "画着什么，小小的身体几乎", font=P.font(20), fill=(233, 224, 230))
-    d.text((26, 408), "整个趴在了桌子上。", font=P.font(20), fill=(233, 224, 230))
-    P.blend(page, (50, 432, 286, 472), 20, (50, 36, 58, 255))
-    d.text((168, 452), "返回", font=P.font(19), fill=(255, 255, 255), anchor="mm")
+    P.blend(page, (12, 326, 324, 414), 14, (26, 20, 32, 255))
+    d.text((168, 334), "预览", font=P.font(13), fill=(156, 143, 155), anchor="ma")
+    d.text((26, 356), "她正专注地在眼前的平板上", font=P.font(19), fill=(233, 224, 230))
+    d.text((26, 382), "画着什么，小小的身体几乎", font=P.font(19), fill=(233, 224, 230))
+    P.blend(page, (50, 420, 286, 460), 20, (50, 36, 58, 255))
+    d.text((168, 440), "返回", font=P.font(19), fill=(255, 255, 255), anchor="mm")
+    return page
+
+
+def page_menu(src):
+    """阅读菜单（2.5.2）：自动播放 / 快进 / 下一章·快退 / 章节·CG / 设置·主页 / 退出。"""
+    page = Image.new("RGBA", (W, H), (20, 15, 23, 255))
+    d = ImageDraw.Draw(page, "RGBA")
+    d.text((W // 2, 14), "阅读菜单", font=P.font(24, True), fill=(255, 216, 230), anchor="ma")
+    d.text((W // 2, 46), "序章 · 咖啡厅的小小身影 · 12%", font=P.font(15),
+           fill=(164, 151, 159), anchor="ma")
+    y = 74
+
+    def one(label, main=False, quit_=False):
+        nonlocal y
+        fill = (185, 80, 121, 255) if main else ((36, 26, 43, 255) if quit_ else (44, 33, 51, 255))
+        P.blend(page, (48, y, 288, y + 36), 18, fill)
+        d.text((168, y + 18), label, font=P.font(17), fill=(255, 255, 255), anchor="mm")
+        y += 41
+
+    def two(a, b):
+        nonlocal y
+        for x, lab in ((48, a), (172, b)):
+            P.blend(page, (x, y, x + 116, y + 36), 18, (44, 33, 51, 255))
+            d.text((x + 58, y + 18), lab, font=P.font(17), fill=(255, 255, 255), anchor="mm")
+        y += 41
+
+    one("继续阅读", main=True)
+    one("保存进度")
+    one("读取存档")
+    one("自动播放：关")
+    one("快进：关")
+    two("下一章", "快退")
+    two("章节", "CG")
+    two("设置", "主页")
+    one("退出", quit_=True)
     return page
 
 
@@ -279,6 +316,7 @@ def main():
         src, [c for c in chapters if not c.get("need")])))
     shots.append(("07b-章节选择·通关后", page_chapters(src, chapters)))
     shots.append(("08-设置", page_settings(src)))
+    shots.append(("09-阅读菜单", page_menu(src)))
 
     for name, im in shots:
         im = im.convert("RGB")
