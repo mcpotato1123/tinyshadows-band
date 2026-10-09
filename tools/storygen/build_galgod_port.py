@@ -318,6 +318,38 @@ def patch_pages(dst_pages, ver):
             "        // 清立绘交给转换器——`scene` 会显式带上 cs:[]，`show` 不带。\n"
             "        if (node.bg !== undefined) this.applyBg(node.bg)\n",
             "背景-去自动清立绘")
+
+        # ③ 正文页的 CG 层要**显式居中裁切**。
+        #    CG 是 854 宽的完整 16:9（比屏幕宽 518），而 Vela 的
+        #    `object-fit: cover` 是**按左上对齐**裁的，不是居中 —— 直接铺会把
+        #    画面左半边显示出来、把人物裁到框外（真机上表现为「人物没了」）。
+        #    CG 以前正好是 336×480、cover 等于不裁，所以一直没暴露。
+        #    这里照上游 cg.ux 那套验证过的做法：套一个 overflow:hidden 的裁切
+        #    容器，用 left 明确偏移到中间。
+        cg_off = (CG_W - W) // 2
+        s = sub(s,
+            '    <!-- CG 层 -->\n'
+            '    <image class="layer" src="{{cgSrc}}" if="{{cgSrc}}" '
+            'onswipe="blockSwipe"></image>\n',
+            '    <!-- CG 层：CG 是 %d 宽的完整 16:9，比屏幕宽 %d。\n'
+            '         Vela 的 object-fit:cover 按左上对齐裁，直接铺会显示左半边、\n'
+            '         把人物裁出画面，所以用裁切容器 + left 偏移来居中。 -->\n'
+            '    <div class="cgclip" if="{{cgSrc}}" onswipe="blockSwipe">\n'
+            '      <image class="cgwide" src="{{cgSrc}}" onswipe="blockSwipe"></image>\n'
+            '    </div>\n' % (CG_W, CG_W - W),
+            "CG层-居中裁切")
+        s = sub(s,
+            '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
+            'height: 480px; object-fit: cover; }\n',
+            '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
+            'height: 480px; object-fit: cover; }\n'
+            '  /* 正文页的 CG 层：把 %d 宽的 CG 居中裁到 336。\n'
+            '     left = -(%d - 336) / 2 = -%d */\n'
+            '  .cgclip { position: absolute; top: 0px; left: 0px; width: 336px; '
+            'height: 480px; overflow: hidden; }\n'
+            '  .cgwide { position: absolute; top: 0px; left: -%dpx; width: %dpx; '
+            'height: 480px; object-fit: fill; }\n' % (CG_W, CG_W, cg_off, cg_off, CG_W),
+            "CG层-居中CSS")
         open(p, "w", encoding="utf-8").write(s)
         done.append("game-252")
         if "game(章节按钮未匹配!)" not in done:

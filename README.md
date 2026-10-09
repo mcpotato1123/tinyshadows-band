@@ -419,6 +419,19 @@ export const CGG = [{"n":"丝袜差分","th":"/common/img/t/g3.png","u":101,"im"
 - 另外挂着两条兜底手势（`onswipe` 步进、左右点击热区步进）：万一 `touchmove`
   在某些固件上不派发，也还能看全图
 
+> ⚠️ **正文页的 CG 层必须显式居中裁切。** CG 是 854 宽的完整 16:9，比屏幕宽 518。
+> Vela 的 object-fit: cover 是**按左上对齐**裁的，不是居中 —— 直接铺会把画面左半边
+> 显示出来、把人物裁出框外（真机上表现为「**人物没了**」，只剩左边的背景）。
+> CG 以前正好是 336×480、cover 等于不裁，所以这个问题一直没暴露。
+> 本工程照上游 cg.ux 那套验证过的做法：套一个 overflow: hidden 的裁切容器，
+> 用 left 明确偏移到中间：
+>
+> `css
+> .cgclip { position: absolute; width: 336px; height: 480px; overflow: hidden; }
+> .cgwide { position: absolute; left: -259px; width: 854px; height: 480px; object-fit: fill; }
+> /*                        ↑ -（854 - 336）/ 2 */
+> `
+
 > ⚠️ **上游这行有个符号问题**（本工程按「原代码」如数保留）：
 > `showPage()` 里是 `this.setPan(CG_PAN_RANGE / 2)`，传的**正数**，
 > 而 `setPan()` 第一句就是 `if (l > 0) l = 0` —— 于是每张 CG 打开时**停在最左边**
