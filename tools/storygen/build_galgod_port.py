@@ -335,8 +335,9 @@ def patch_pages(dst_pages, ver):
             '         Vela 的 object-fit:cover 按左上对齐裁，直接铺会显示左半边、\n'
             '         把人物裁出画面，所以用裁切容器 + left 偏移来居中。 -->\n'
             '    <div class="cgclip" if="{{cgSrc}}" onswipe="blockSwipe">\n'
-            '      <image class="cgwide" src="{{cgSrc}}" onswipe="blockSwipe"></image>\n'
-            '    </div>\n' % (CG_W, CG_W - W),
+            '      <image class="cgwide" style="left: -%dpx;" src="{{cgSrc}}" '
+            'onswipe="blockSwipe"></image>\n'
+            '    </div>\n' % (CG_W, CG_W - W, cg_off),
             "CG层-居中裁切")
         s = sub(s,
             '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
@@ -344,11 +345,11 @@ def patch_pages(dst_pages, ver):
             '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
             'height: 480px; object-fit: cover; }\n'
             '  /* 正文页的 CG 层：把 %d 宽的 CG 居中裁到 336。\n'
-            '     left = -(%d - 336) / 2 = -%d */\n'
+            '     left 偏移交给内联 style —— 上游能工作的 .bgwide / .big 都是这么写的。 */\n'
             '  .cgclip { position: absolute; top: 0px; left: 0px; width: 336px; '
             'height: 480px; overflow: hidden; }\n'
-            '  .cgwide { position: absolute; top: 0px; left: -%dpx; width: %dpx; '
-            'height: 480px; object-fit: fill; }\n' % (CG_W, CG_W, cg_off, cg_off, CG_W),
+            '  .cgwide { position: absolute; top: 0px; left: 0px; width: %dpx; '
+            'height: 480px; object-fit: fill; }\n' % (CG_W, CG_W),
             "CG层-居中CSS")
         open(p, "w", encoding="utf-8").write(s)
         done.append("game-252")

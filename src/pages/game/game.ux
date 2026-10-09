@@ -27,7 +27,7 @@
          Vela 的 object-fit:cover 按左上对齐裁，直接铺会显示左半边、
          把人物裁出画面，所以用裁切容器 + left 偏移来居中。 -->
     <div class="cgclip" if="{{cgSrc}}" onswipe="blockSwipe">
-      <image class="cgwide" src="{{cgSrc}}" onswipe="blockSwipe"></image>
+      <image class="cgwide" style="left: -259px;" src="{{cgSrc}}" onswipe="blockSwipe"></image>
     </div>
 
     <!-- 回忆滤镜 -->
@@ -119,9 +119,9 @@
 
   .layer { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; object-fit: cover; }
   /* 正文页的 CG 层：把 854 宽的 CG 居中裁到 336。
-     left = -(854 - 336) / 2 = -259 */
+     left 偏移交给内联 style —— 上游能工作的 .bgwide / .big 都是这么写的。 */
   .cgclip { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; overflow: hidden; }
-  .cgwide { position: absolute; top: 0px; left: -259px; width: 854px; height: 480px; object-fit: fill; }
+  .cgwide { position: absolute; top: 0px; left: 0px; width: 854px; height: 480px; object-fit: fill; }
 
   /* 全景背景：比屏幕宽 BG_PAN_RANGE 的一张宽图，left 由定时器小步推进。
      两层保险：
