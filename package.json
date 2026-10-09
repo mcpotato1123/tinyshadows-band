@@ -1,7 +1,7 @@
 {
   "name": "tinyshadows-band",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.5.2",
   "description": "《小小的身影，重叠的内心》—— 小米手环 9 Pro（Vela 快应用）移植版。引擎与界面来自开源项目 galgod-band。",
   "scripts": {
     "build": "node tools/build.js",

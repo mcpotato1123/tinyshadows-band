@@ -15,7 +15,7 @@
 CG 鉴赏   8 组 / 31 张差分图，按原作 gallery_screen.rpy 的分组与解锁条件
 页面      7 个：主页 / 正文 / 存档 / 章节 / CG 鉴赏 / 设置 / 关于
 协议      代码 MIT（见 LICENSE）；剧本与美术资源不在 MIT 范围内（见 NOTICE.md）
-产物      dist/com.tinyshadows.band.debug.1.0.0.rpk
+产物      dist/com.tinyshadows.band.debug.2.5.2.rpk   8.04 MB
 ```
 
 > **免责声明**：本项目是非官方的个人移植，仅供学习交流。
@@ -120,7 +120,7 @@ tinyshadows-band/
 
 ```bash
 npm install                    # 只有 aiot-toolkit 一个真正的依赖
-npm run build                  # → dist/com.tinyshadows.band.debug.1.0.0.rpk
+npm run build                  # → dist/com.tinyshadows.band.debug.2.5.2.rpk
 npm run release                # → dist/…release….rpk（需要 sign/ 下的证书）
 npm run test                   # 运行时分页测试（字号 14~30 全量）
 npm run start                  # 起模拟器预览（需要 AIoT-IDE/模拟器环境）
@@ -609,8 +609,8 @@ if (node.bg !== undefined) {
 | 运行时分页 | `tools/test_paginate.js`（`npm test`） | ✅ 把 `reader.js` 与 `game.ux` 的**源码原文**抠出来执行，字号 14~30 逐个跑全剧本 2503 句：不超行、不超页、不丢字、不压 `▼` |
 | 版本号一致性 | `tools/build.js` 的 `preflight()` | ✅ 核对 `about.ux` 的 `APP_VER` 与 `manifest.json` 的 `versionName`，不一致直接拒绝构建 |
 | 上传前自检 | `tools/check_encoding.py` | ✅ 全部文本文件合法 UTF-8、无误传文件、README 引用的图片都在 |
-| 工程可构建 | `npm run build` | ✅ 编译通过，rpk **6.84 MB**，220 条目 / **170 PNG** / 21 剧本块，**无 JPEG**（真机解码 JPEG 不可靠） |
-| 图片体积 | 构建产物统计 | 背景 2.00 + 立绘 1.56 + CG 2.95 + 缩略图 0.02 = **6.53 MB**（预算 < 9 MB） |
+| 工程可构建 | `npm run build` | ✅ 编译通过，rpk **8.04 MB**，261 条目 / **210 PNG** / 21 剧本块，**无 JPEG**（真机解码 JPEG 不可靠） |
+| 图片体积 | 构建产物统计 | 背景 2.00 + 立绘 1.56 + CG正文 1.19 + CG画廊 2.95 + 缩略图 0.02 = **7.72 MB**（预算 < 9 MB） |
 | 界面预览 | `tools/preview_port.py` | 用真实资源按 `game.ux` 的 CSS 数值 1:1 合成 `preview/ui-preview.png` |
 
 `audit_stage.py` 抓出过「立绘跨场景残留 188 处」；转换过程中的两个逻辑 bug

@@ -38,7 +38,8 @@ from rpyc_dump import slots_of  # noqa: E402
 from rpyc_expr import expr_text  # noqa: E402
 
 CHUNK = 128
-VER = "1.0.0"
+VER = "2.5.2"                   # 跟随 galgod 基线版本
+VCODE = 50                      # 与 versionName 一起改；上游 2.5.2 用的就是 50
 APP_NAME = "小小的身影，重叠的内心"
 W, H = 336, 480                 # 小米手环 9 Pro 屏幕（designWidth 336 → 1px = 1 物理像素）
 # 背景出**宽幅 672×480**（比屏幕宽 336）：上游 game.ux 的「全景背景」就是靠
@@ -1325,7 +1326,7 @@ def main():
     mf["package"] = "com.tinyshadows.band"
     mf["name"] = APP_NAME
     mf["versionName"] = VER
-    mf["versionCode"] = 1
+    mf["versionCode"] = VCODE
     mf["display"] = {"backgroundColor": "#000000"}
     with open(os.path.join(dst, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(mf, f, ensure_ascii=False, indent=2)

@@ -221,7 +221,7 @@ def page_about(src, lines):
     page = Image.new("RGBA", (W, H), (20, 16, 26, 255))
     d = ImageDraw.Draw(page, "RGBA")
     d.text((0, 4), "关于", font=P.font(22, True), fill=(255, 216, 230), anchor="ma")
-    d.text((0, 36), "小小的身影，重叠的内心 · v1.0.0", font=P.font(12),
+    d.text((0, 36), "小小的身影，重叠的内心 · v2.5.2", font=P.font(12),
            fill=(156, 143, 155), anchor="ma")
     y = 58
     for kind, text in lines:
