@@ -1,7 +1,19 @@
 <template>
-  <div class="page" onclick="onTap" onlongpress="toggleImmersive" onswipe="blockSwipe">
+  <div class="page" onclick="onTap" onlongpress="toggleImmersive"
+       ontouchstart="onHoldStart" ontouchend="onHoldEnd" ontouchcancel="onHoldEnd"
+       onswipe="blockSwipe">
 
-    <!-- 背景层 -->
+    <!-- 背景层：一张宽图 + 定时器小步推进 left 做平移。
+         不用 CSS transition、不用 swiper —— 那两个在真机上都不行，
+         详见下方 BG_PAN_RANGE 附近的说明。
+
+         外面必须套一个 overflow:hidden 的裁切容器：宽图是 672、屏幕只有 336，
+         不裁住的话运行时会把这个页面当成"内容比视口宽"的横向可滚动区域，
+         玩家一拖就把整个背景拖走。**只给 .page 加 overflow 不够保险**
+         （根节点是页面本身，运行时不一定会把它当普通容器处理），
+         所以这里用一个明确的子容器再裁一层。 -->
+    <!-- 背景层：一张静态的 336×480 铺满屏幕。
+         本作不使用上游的全景背景（宽图 + 定时器平移 left），原因见 README。 -->
     <image class="layer" src="{{bgSrc}}" if="{{bgSrc}}" onswipe="blockSwipe"></image>
     <div class="solid" if="{{showBlack}}"></div>
     <div class="solid-white" if="{{showWhite}}"></div>
@@ -22,9 +34,13 @@
       <text class="hud-t">{{chapterTitle}}</text>
       <text class="hud-p">{{progress}}</text>
     </div>
-    <div class="menu-btn" if="{{!uiHidden && !endText}}" onclick="openMenu" onswipe="blockSwipe">
+    <!-- 打开菜单的按钮：已改为「**下滑**打开」，按钮暂时隐藏。
+         代码**没有删** —— openMenu() 和下面的 .menu-btn 样式都还在。
+         想恢复按钮，把下面这行的 if 改回 {{!uiHidden && !endText}} 即可。
+    <div class="menu-btn" if="{{false}}" onclick="openMenu" onswipe="blockSwipe">
       <text class="menu-ico">≡</text>
     </div>
+    -->
 
     <!-- 对白面板（出现选项时收起，避免空框）；看 CG 时压得更透，让画面露出来 -->
     <div class="panel" if="{{!uiHidden && !endText && !choices.length && !cgSrc}}" onswipe="blockSwipe"></div>
@@ -63,8 +79,12 @@
       <div class="mbtn" onclick="goSave" onswipe="blockSwipe"><text class="mbtn-t">保存进度</text></div>
       <div class="mbtn" onclick="goLoad" onswipe="blockSwipe"><text class="mbtn-t">读取存档</text></div>
       <div class="mbtn" onclick="toggleAuto" onswipe="blockSwipe"><text class="mbtn-t">自动播放：{{autoOn ? '开' : '关'}}</text></div>
-      <div class="mbtn" onclick="toggleFast" onswipe="blockSwipe"><text class="mbtn-t">快速播放：{{fastOn ? '开' : '关'}}</text></div>
-      <div class="mbtn" if="{{showChapters}}" onclick="nextChapter" onswipe="blockSwipe"><text class="mbtn-t">跳到下一章</text></div>
+      <div class="mbtn" onclick="toggleFast" onswipe="blockSwipe"><text class="mbtn-t">快进：{{fastOn ? '开' : '关'}}</text></div>
+      <div class="mrow" if="{{showChapters}}">
+        <div class="mbtn mbtn-half" onclick="nextChapter" onswipe="blockSwipe"><text class="mbtn-t">下一章</text></div>
+        <div class="mbtn mbtn-half" onclick="rewind" onswipe="blockSwipe"><text class="mbtn-t">快退</text></div>
+      </div>
+      <div class="mbtn" if="{{!showChapters}}" onclick="rewind" onswipe="blockSwipe"><text class="mbtn-t">快退</text></div>
       <div class="mrow" if="{{showChapters}}">
         <div class="mbtn mbtn-half" onclick="goChapters" onswipe="blockSwipe"><text class="mbtn-t">章节</text></div>
         <div class="mbtn mbtn-half" onclick="goCg" onswipe="blockSwipe"><text class="mbtn-t">CG</text></div>
@@ -81,15 +101,29 @@
 </template>
 
 <style>
+  /* overflow:hidden 是必须的：背景图有 672 宽，是屏幕的两倍。
+     不裁住的话运行时会把这个页面当成"内容比视口宽"的横向可滚动区域，
+     玩家一拖就把整个背景拖走（真机上出现过这个现象）。 */
   .page {
     width: 336px;
     height: 480px;
     background-color: #000000;
     flex-direction: column;
     position: relative;
+    overflow: hidden;
   }
 
   .layer { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; object-fit: cover; }
+
+  /* 全景背景：比屏幕宽 BG_PAN_RANGE 的一张宽图，left 由定时器小步推进。
+     两层保险：
+       1) .bgclip 是明确的裁切容器（overflow:hidden），把 672 宽的图裁在 336 里
+       2) .page 上也有 overflow:hidden
+     不要给 .bgwide 加 transition —— 真机上会渲染出重影/接缝。 */
+  .bgclip { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px;
+            overflow: hidden; }
+  .bgwide { position: absolute; top: 0px; left: 0px; width: 672px; height: 480px;
+            object-fit: fill; }
   .solid { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; background-color: #000000; }
   .solid-white { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; background-color: #ffffff; }
 
@@ -109,9 +143,11 @@
   .hud-t { font-size: 17px; color: #ffe6ef; }
   .hud-p { font-size: 15px; color: #b9b0b6; margin-left: 8px; }
 
-  .menu-btn { position: absolute; top: 8px; left: 290px; width: 36px; height: 36px; border-radius: 18px;
+  /* 右上角菜单按钮：原来 36x36 太小，手环上不好点。
+     放大到 52x52（贴右边缘留 6px 外边距），图标也放大。 */
+  .menu-btn { position: absolute; top: 6px; left: 278px; width: 52px; height: 52px; border-radius: 26px;
               background-color: rgba(27, 21, 32, 0.82); align-items: center; justify-content: center; }
-  .menu-ico { font-size: 24px; color: #ffd8e6; }
+  .menu-ico { font-size: 30px; color: #ffd8e6; }
 
   /* 底板 330..480。说话人单独浮在底板上方（298），不再贴着底板边缘。
      两种底板用同一套几何：只改透明度，避免看 CG 时底板下移、说话人半悬在边缘上。 */
@@ -166,8 +202,8 @@ import router from '@system.router'
 import storage from '@system.storage'
 import prompt from '@system.prompt'
 import file from '@system.file'
-import { IMG, SP_FEET } from '../../common/assets.js'
 import brightness from '@system.brightness'
+import { IMG, SP_FEET } from '../../common/assets.js'
 import {
   DEFAULT_SETTINGS, autoDelay, loadSettings, saveSettings, paginateText,
   loadAutoSave, saveAutoSave, loadSeen, saveSeen, loadCleared, markCleared
@@ -188,7 +224,76 @@ const TEXT_PAD = 6        // 每行右侧留的余量（算每行字数用）
 const TEXT_BOX_H = 122    // 正文区高度：取 122 是为了让最后一行（最长情况 458）
                           // 停在下方的 ▼ 继续提示（462）之上，不压到一起
 const MAX_LINES = 6       // .ln 的槽位数量，必须 >= 字号 14 时的行数
+
+// ---------------------------------------------------------------- 全景背景
+// 背景是一张 BG_W 宽的宽图，显示框只有 336 宽，靠**定时器小步推进 left** 做平移。
+//
+// 为什么不用更"聪明"的两条路（都在真机上失败，记下来免得再踩）：
+//   1) 宽图 + left + CSS transition 平移 → 画面中间出竖向接缝，
+//      接缝位置正好等于平移距离，疑似过渡中间态被渲染成两个位置叠加
+//   2) 预切整屏图块 + <swiper autoplay> 轮播 → 幻灯片不贴合（中间留黑带）、
+//      另一版里整个画面还被放大
+// left 本身是能正确渲染的（方案 1 里画面位置就是对的，坏的只是 transition 补间），
+// 所以这里自己按固定间隔推进 left，**完全不碰 transition**。
+//
+// 步长 4px / 100ms = 40px/s，扫完 336px 约 8.4 秒。
+// 步子再小也不会更顺（这是 10fps 的离散推进），再大就会看出跳。
+const BG_W = 672           // 背景素材宽度，必须与 tools/gen_assets.py 的 BG_W 一致
+const BG_PAN_RANGE = BG_W - 336   // 可平移距离
+const BG_STEP_PX = 4       // 每帧推进多少像素
+const BG_TICK_MS = 100     // 每帧间隔（10fps）
 const AUTO_DEFAULT = 90    // 从菜单打开自动播放时给的默认停留（毫秒/字）
+// 按住多久才算「长按快进」。和系统长按识别的阈值接近，
+// 但这里是**自己计时**的 —— 因为要能感知「松手」。
+const HOLD_MS = 450
+// 兜底：按住超过这么久就强制停快进。
+// 正常松手由 touchend 收尾；这个只是防止 touchend 没来导致快进卡住。
+const HOLD_MAX_MS = 20000
+
+// 取触摸点的 y。不同固件把坐标放在不同字段，逐个试
+// （readX 是 cg 页那套经真机验证的写法，这里照抄成 y）。
+// 注意要试 changedTouches —— touchend 时 touches 是空的。
+function readY(e) {
+  if (!e) return null
+  let p = null
+  if (e.touches && e.touches.length) p = e.touches[0]
+  else if (e.changedTouches && e.changedTouches.length) p = e.changedTouches[0]
+  else p = e
+  if (!p) return null
+  if (typeof p.clientY === 'number') return p.clientY
+  if (typeof p.pageY === 'number') return p.pageY
+  if (typeof p.y === 'number') return p.y
+  if (typeof p.offsetY === 'number') return p.offsetY
+  return null
+}
+
+// 取触摸点的 x。和 readY 同款兜底（readX 是 cg 页那套经真机验证的写法）。
+function readX(e) {
+  if (!e) return null
+  let p = null
+  if (e.touches && e.touches.length) p = e.touches[0]
+  else if (e.changedTouches && e.changedTouches.length) p = e.changedTouches[0]
+  else p = e
+  if (!p) return null
+  if (typeof p.clientX === 'number') return p.clientX
+  if (typeof p.pageX === 'number') return p.pageX
+  if (typeof p.x === 'number') return p.x
+  if (typeof p.offsetX === 'number') return p.offsetX
+  return null
+}
+
+// 滑动判定的阈值：位移够小就能触发（系统手势识别要求比这高得多，所以原来不灵敏）
+const SWIPE_MIN = 36    // 纵向至少滑这么多像素
+const SWIPE_MS = 800    // 且要在这么久之内
+
+// 取手势方向。不同固件把方向放在不同位置，逐个试（cg 页同款写法）。
+function readDir(e) {
+  if (!e) return ''
+  if (typeof e.direction === 'string') return e.direction
+  if (e.detail && typeof e.detail.direction === 'string') return e.detail.direction
+  if (e.target && typeof e.target.direction === 'string') return e.target.direction
+  return ''
+}
 
 export default {
   // ⚠️ Vela 运行时硬性规定：data 与 public/protected/private 不能同时存在，
@@ -212,14 +317,23 @@ export default {
     speaker: '',
     l0: '', l1: '', l2: '', l3: '', l4: '', l5: '',
     s0: '', s1: '', s2: '', s3: '', s4: '', s5: '',
+    bgStyle: '',
     canTap: false,
     choices: [],
     menu: false,
+    // 快退用的快照栈。**不持久化** —— 只是这一会儿读过的历史。
+    // 不进存档：写进去会让存档明显变大，而回溯只在"一口气读"时有用。
+    hist: [],
+    rewindRepeat: null,
     uiHidden: false,
     endText: '',
     autoOn: false,
     fastOn: false,
-    showChapters: false
+    showChapters: false,
+    holdFast: false,
+    swipeY0: null,
+    swipeX0: null,
+    swipeT0: 0,
   },
 
   // ---------------------------------------------------------------- 生命周期
@@ -240,8 +354,18 @@ export default {
     this.typingToken = 0
     this.typingAt = 0
     this.timer = null
+    this.holdTimer = null
+    this.holdMax = null
+    this.holdFast = false
+    this.swipeY0 = null
+    this.swipeX0 = null
+    this.swipeT0 = 0
+    this.rewindRepeat = null
     this.autoTimer = null
     this.saveTimer = null
+    this.bgTimer = null
+    this.bgOffset = 0
+    this.bgDir = 1
     this.advanceCount = 0
     this.csRaw = []
     this.settings = DEFAULT_SETTINGS
@@ -264,9 +388,9 @@ export default {
         this.autoOn = s.autoMs > 0
         this.fastOn = !!s.fast
         this.applyFont()
+        this.applyScreenKeepOn()
         this.log('设置已载入 size=' + s.size + ' speed=' + s.speed +
                  ' auto=' + s.autoMs + ' fast=' + s.fast + ' keepOn=' + s.keepOn)
-        this.applyScreenKeepOn()
         this.bootstrap()
       })
     } catch (e) {
@@ -290,35 +414,29 @@ export default {
       this.applyFont()
       this.applyScreenKeepOn()
     })
+    // 从别的页面切回来时，背景轮播和屏幕常亮都要重新生效
+    if (this.bgSrc) this.startBgPan()
     if (this.pageText) {
       this.typingToken++
       this.renderTyping(this.pageText.length)
     }
   },
+  // ⚠️ 上游 2.5.2 在这里写了**两个同名的 onHide()**，后者覆盖前者，
+  // 于是「关常亮 / 清定时器 / 落盘」全成了死代码。这里合并成一个。
   onHide() {
+    this.onHoldEnd()
+    this.stopRewindRepeat()      // 退到后台就别再退了
     this.clearTimers()
-    this.setKeepScreenOn(false)   // 离开阅读页就别占着屏幕了
+    this.setKeepScreenOn(false)
     this.flushAutoSave()
     this.flushSeen()
   },
 
-  // ------------------------------------------------------------ 屏幕常亮
-  // Vela 用 @system.brightness 的 setKeepScreenOn；manifest 的 features 里
-  // 必须声明 system.brightness，否则调用会抛错。
-  // 包一层 try/catch：万一某些固件没这个接口，也只是不常亮，不能让阅读崩掉。
-  setKeepScreenOn(on) {
-    try {
-      brightness.setKeepScreenOn({ keepScreenOn: !!on })
-    } catch (e) {
-      this.log('设置屏幕常亮失败: ' + (e && e.message ? e.message : e))
-    }
-  },
-  applyScreenKeepOn() {
-    const s = this.settings || {}
-    this.setKeepScreenOn(!!s.keepOn)
-  },
   onDestroy() {
+    this.onHoldEnd()
+    this.stopRewindRepeat()
     this.clearTimers()
+    this.setKeepScreenOn(false)
     this.flushAutoSave()
     this.flushSeen()
     if (this.watch) { clearTimeout(this.watch); this.watch = null }
@@ -608,6 +726,9 @@ export default {
         const node = this.chunkNodes[this.pc - this.chunkStart]
         if (!node) { this.badge = '节点为空 ' + this.pc; return }
 
+        // 上游 2.5.2 在这里做了「bg 不带 cs 就清立绘」的推断（假设 bg ≡ scene）。
+        // 本作不合用：剧本里有 15 处是 `show bg`（不是 scene），不该清立绘。
+        // 清立绘交给转换器——`scene` 会显式带上 cs:[]，`show` 不带。
         if (node.bg !== undefined) this.applyBg(node.bg)
         if (node.cs !== undefined) { this.csRaw = node.cs; this.renderSprites(node.cs) }
         if (node.cg !== undefined) {
@@ -661,6 +782,8 @@ export default {
     this.bgSrc = idx >= 0 ? (IMG[idx] || '') : ''
     this.showBlack = idx === -1
     this.showWhite = idx === -2
+    // 换背景时从最左边重新开始扫（起点统一，不会出现"从中间开始"的怪异观感）
+    this.startBgPan()
   },
 
   // 立绘的丝袜跟着剧情里的 stockings_color 走，和原作的 syq_adjuster 一致：
@@ -759,6 +882,16 @@ export default {
     this.endText = ''
     this.speaker = node.n || ''
     this.rawText = node.x || ''
+    // 快退用：每显示一句就记一份快照。整段包 try/catch ——
+    // 记录失败最多是退不回去，绝不能让剧情推进停住（黑屏过一次）。
+    try {
+      if (!this.hist) this.hist = []
+      const top = this.hist[this.hist.length - 1]
+      if (!top || top.pc !== this.pc) {
+        this.hist.push(this.collectSave())
+        if (this.hist.length > 60) this.hist.shift()
+      }
+    } catch (e) { /* 记不上就算了，不影响阅读 */ }
     this.pages = this.paginate(this.rawText)
     this.pageIdx = 0
     this.playPage()
@@ -814,14 +947,15 @@ export default {
   scheduleAuto() {
     this.clearAuto()
     if (this.choices.length || this.endText) return
-    // 快速播放：瞬间出字 + 220ms 连播；遇到选项/结局由上面两行自动停下
+    // 快进：瞬间出字 + 220ms 连播；遇到选项/结局由上面两行自动停下。
+    // 走 advance() 而不是 onTap()，否则会被 400ms 的防抖锁吃掉（见 advance 的说明）。
     if (this.settings.fast) {
-      this.autoTimer = setTimeout(() => { this.autoTimer = null; this.onTap() }, 220)
+      this.autoTimer = setTimeout(() => { this.autoTimer = null; this.advance() }, 220)
       return
     }
     if (!this.settings.autoMs) return
     const wait = autoDelay(this.pageText, this.settings.autoMs)
-    this.autoTimer = setTimeout(() => { this.autoTimer = null; this.onTap() }, wait)
+    this.autoTimer = setTimeout(() => { this.autoTimer = null; this.advance() }, wait)
   },
 
   clearAuto() { if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null } },
@@ -829,12 +963,74 @@ export default {
     if (this.timer) { clearTimeout(this.timer); this.timer = null }
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null }
     this.clearAuto()
+    this.stopBgPan()
     this.typingToken++
   },
 
+  // ---------------------------------------------------------------- 屏幕常亮
+  // Vela 用 @system.brightness 的 setKeepScreenOn 来保持屏幕常亮。
+  // 必须在 manifest 的 features 里声明 system.brightness，否则调用会抛错。
+  // 包一层 try/catch：万一某些固件没这个接口，也只是不常亮，不能让阅读崩掉。
+  setKeepScreenOn(on) {
+    try {
+      brightness.setKeepScreenOn({ keepScreenOn: !!on })
+    } catch (e) {
+      this.log('设置屏幕常亮失败: ' + (e && e.message ? e.message : e))
+    }
+  },
+
+  applyScreenKeepOn() {
+    const s = this.settings || {}
+    this.setKeepScreenOn(!!s.keepOn)
+  },
+
+  // ---------------------------------------------------------------- 全景背景
+  // 每 BG_TICK_MS 把 left 推进 BG_STEP_PX，走到头再往回走，来回扫。
+  // 完全不碰 CSS transition —— 那玩意在这个运行时上会渲染出接缝。
+  startBgPan() {
+    // 本作不使用全景背景：背景是一张静态的 336×480 铺满屏幕。
+    // 方法保留（applyBg / onShow 还在调它），但不起定时器、不设偏移。
+    this.stopBgPan()
+    this.bgStyle = ''
+  },
+
+  bgPanTick() {
+    if (!this.bgSrc) return
+    let off = this.bgOffset + this.bgDir * BG_STEP_PX
+    if (off >= BG_PAN_RANGE) { off = BG_PAN_RANGE; this.bgDir = -1 }
+    else if (off <= 0) { off = 0; this.bgDir = 1 }
+    this.bgOffset = off
+    this.bgStyle = 'left: -' + off + 'px;'
+  },
+
+  stopBgPan() { if (this.bgTimer) { clearInterval(this.bgTimer); this.bgTimer = null } },
+
   // ---------------------------------------------------------------- 交互
+  // 物理点击：先过 400ms 防抖锁（避免一次触摸被识别成两下）
   onTap() {
+    // 兜底：如果松手时只来了 click、没来 touchend，在这里把快进收掉。
+    // 必须在下面那个 lockTap 早退**之前**做 —— 否则迟到的 click 收不了尾。
+    this.onHoldEnd()
+    // ⚠️ 这道锁必须在「停止快退」**之前**：
+    // 菜单里按「快退」时，那次点击会冒泡到根节点触发本函数，
+    // 而 rewind() 已经调过 lock()（设了 lockTap）—— 先让它吞掉这次冒泡的点击，
+    // 否则快退刚起就被自己停掉（真机上就是这个现象：一点就提示「已停止快退」）。
     if (this.lockTap && Date.now() - this.lockTap < 400) return
+    // 真正点在屏幕上（不是按钮冒泡上来的）：停连续快退，并且不翻页
+    if (this.rewindRepeat) {
+      this.stopRewindRepeat()
+      this.lockTap = Date.now()
+      prompt.showToast({ message: '已停止快退' })
+      return
+    }
+    this.advance()
+  },
+
+  // 真正的推进逻辑。**自动播放 / 快进也走这里，而不是 onTap()** ——
+  // toggleFast() / closeMenu() 都会先 lock() 一下，
+  // 而快进的定时器只有 220ms，走 onTap() 会被 400ms 的锁吃掉、而且不会重新排，
+  // 链条就断了。真机上表现为「开了快进还要再点一下屏幕才开始」。
+  advance() {
     if (this.endText) { router.replace({ uri: 'pages/index' }); return }
     if (this.menu || this.choices.length) return
     this.clearAuto()
@@ -849,12 +1045,165 @@ export default {
 
   toggleImmersive() {
     if (this.menu || this.endText) return
+    // 长按干什么由设置决定（三选一）：
+    //   'hide' 隐藏/显示界面（老行为）
+    //   'fast' 切换快进 —— 阅读时随手长按比翻菜单方便
+    //   'off'  什么也不做（防误触）
+    const mode = this.longpressMode()
+    if (mode === 'off') return
+    // 'fast' 模式由 onHoldStart / onHoldEnd 处理（按住才快进、松手就停），
+    // 这里不能也切一次，否则长按会同时开快进又被这里顶掉。
+    if (mode === 'fast') return
     this.lock()
     this.uiHidden = !this.uiHidden
     this.clearAuto()
   },
 
-  blockSwipe() {},
+  // ---- 长按快进：**按住才快进，松手就停**
+  // Vela 的 onlongpress 只在识别时触发一次、没有松手事件，
+  // 所以按下时自己计时，松手/取消时收尾。
+  onHoldStart(e) {
+    // 顺手记下滑动起点：下滑开菜单、右滑快退都要自己算位移（见 onHoldEnd）
+    this.swipeY0 = readY(e)
+    this.swipeX0 = readX(e)
+    this.swipeT0 = Date.now()
+    if (this.menu || this.endText || this.choices.length) return
+    if (this.longpressMode() !== 'fast') return
+    if (this.holdTimer) { clearTimeout(this.holdTimer); this.holdTimer = null }
+    this.holdTimer = setTimeout(() => {
+      this.holdTimer = null
+      this.holdFast = true
+      this.lock()
+      this.setFast(true)
+      // 看门狗：touchcancel 也可能一起不来，兜一下
+      this.holdMax = setTimeout(() => {
+        this.holdMax = null
+        if (this.holdFast) this.onHoldEnd()
+      }, HOLD_MAX_MS)
+    }, HOLD_MS)
+  },
+
+  onHoldEnd(e) {
+    // 还没到长按时长就松手了：先看是不是一次下滑
+    if (this.holdTimer) { clearTimeout(this.holdTimer); this.holdTimer = null }
+    if (this.holdMax) { clearTimeout(this.holdMax); this.holdMax = null }
+    this.checkSwipeDown(e)
+    if (!this.holdFast) return
+    this.holdFast = false
+    this.setFast(false)
+  },
+
+  // 只改内存里的状态，**不写盘** —— fast 是临时状态（见 reader.js 的 saveSettings）
+  setFast(on) {
+    const s = Object.assign({}, this.settings)
+    s.fast = !!on
+    if (on) s.autoMs = 0          // 快进与自动播放互斥
+    this.settings = s
+    this.fastOn = !!s.fast
+    this.autoOn = s.autoMs > 0
+    if (on) this.scheduleAuto()
+    else this.clearAuto()
+  },
+
+  // 自己判滑动。比 onswipe 灵敏得多：只看位移和耗时，不看速度/加速度。
+  //   向下滑 -> 开菜单
+  //   向右滑 -> 快退（返回上一句）
+  checkSwipeDown(e) {
+    const y0 = this.swipeY0
+    const x0 = this.swipeX0
+    const t0 = this.swipeT0
+    this.swipeY0 = null
+    this.swipeX0 = null
+    this.swipeT0 = 0
+    if (!t0) return
+    if (Date.now() - t0 > SWIPE_MS) return
+    if (this.menu || this.endText) return
+
+    const y1 = readY(e)
+    const x1 = readX(e)
+    const dy = (y1 === null || y1 === undefined || y0 === null || y0 === undefined)
+      ? 0 : (y1 - y0)
+    const dx = (x1 === null || x1 === undefined || x0 === null || x0 === undefined)
+      ? 0 : (x1 - x0)
+
+    // 竖向优先：斜着滑的时候按下滑处理（下滑是打开菜单，更常用）
+    if (dy >= SWIPE_MIN && dy >= Math.abs(dx)) {
+      this.lockTap = Date.now()      // 吞掉紧随其后的 click，免得顺带翻一页
+      this.openMenu()
+      return
+    }
+    // 向右（x 变大）才算快退
+    if (dx >= SWIPE_MIN && dx > Math.abs(dy)) {
+      this.lockTap = Date.now()
+      this.rewindOnce()          // 右滑只退一句（连续退是菜单里那个按钮）
+    }
+  },
+
+  // 读设置里的长按行为，并兼容老存档（布尔 true/false）
+  longpressMode() {
+    const v = (this.settings || {}).longpress
+    if (v === true) return 'hide'
+    if (v === false) return 'off'
+    return (v === 'fast' || v === 'off') ? v : 'hide'
+  },
+
+  // 所有元素都挂了这个处理器。原来它什么都不做（只是吃掉手势、防止页面被滑走），
+  // 现在兼职「下滑打开菜单」—— 因为按钮隐藏了，而挂在根节点上的 onswipe
+  // 会被子元素吃掉（cg 页踩过这个），所以放在这里最稳。
+  blockSwipe(e) {
+    if (this.menu || this.endText) return
+    if (readDir(e) !== 'down') return
+    this.openMenu()
+  },
+
+  // ---- 快退：往回退一句 ----
+  // 复用存档那套快照（collectSave / applySave），所以角色、背景、CG、分支标志
+  // 都会一起回去 —— 退到选择支之前还能重新选，状态是自洽的。
+  // ---- 快退 ----
+  // 菜单里按一下：关掉菜单回到正文，然后**一直退**。
+  // 想停就在正文页点一下屏幕（见 onTap）。
+  rewind() {
+    this.lock()
+    this.menu = false
+    this.clearAuto()
+    this.stopRewindRepeat()
+    if (!this.rewindStep()) {
+      prompt.showToast({ message: '已经是最早的一句了' })
+      return
+    }
+    this.rewindRepeat = setInterval(() => {
+      if (!this.rewindStep()) {
+        this.stopRewindRepeat()
+        prompt.showToast({ message: '已经退到最早的一句了' })
+      }
+    }, 180)
+  },
+
+  // 退一句。返回 false 表示退不动了。不弹提示、不关菜单（连续退靠它）。
+  rewindStep() {
+    const h = this.hist || []
+    if (h.length < 2) return false
+    h.pop()                    // 丢掉当前这句
+    const prev = h.pop()       // 目标是上一句
+    h.push(prev)               // 它成为新的栈顶
+    this.applySave(prev)
+    return true
+  },
+
+  // 正文页右滑用：**只退一句**，不启动连续退。
+  // 如果正在连续退，先停下、交回手动控制。
+  rewindOnce() {
+    this.lock()
+    if (this.rewindRepeat) this.stopRewindRepeat()
+    if (!this.rewindStep()) prompt.showToast({ message: '已经是最早的一句了' })
+  },
+
+  stopRewindRepeat() {
+    if (this.rewindRepeat) {
+      clearInterval(this.rewindRepeat)
+      this.rewindRepeat = null
+    }
+  },
 
   openMenu() { this.lock(); this.menu = true; this.clearAuto() },
   closeMenu() { this.lock(); this.menu = false; this.scheduleAuto() },

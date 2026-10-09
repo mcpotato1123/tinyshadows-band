@@ -21,7 +21,11 @@ export const DEFAULT_SETTINGS = {
   speed: 28,      // 打字机 每字毫秒
   autoMs: 0,      // 自动播放 每字停留毫秒（0 = 关）
   fast: false,    // 快速播放（瞬间出字 + 连播，遇到选项/结局自动停）
-  keepOn: true    // 阅读时屏幕常亮（走 @system.brightness）
+  keepOn: true,   // 阅读时屏幕常亮（走 @system.brightness）
+  // 长按画面的行为：'hide' 隐藏界面 / 'fast' 按住快进 / 'off' 什么都不做
+  // 默认 'off'：长按隐藏界面容易误触（阅读时手指搭在屏幕上就会触发），
+  // 想要的玩家可以在设置里自己开。
+  longpress: 'off'
 }
 
 export const MAX_SLOTS = 6
@@ -37,10 +41,19 @@ export function normalizeSettings(raw) {
   s.size = clampInt(s.size, SIZE_MIN, SIZE_MAX, DEFAULT_SETTINGS.size)
   s.speed = clampInt(s.speed, SPEED_MIN, SPEED_MAX, DEFAULT_SETTINGS.speed)
   s.autoMs = clampInt(s.autoMs, AUTO_MIN, AUTO_MAX, DEFAULT_SETTINGS.autoMs)
-  s.fast = !!s.fast
-  // keepOn 默认是 true，所以不能用 !!s.keepOn —— 老存档里没有这个键时会被压成 false
+  // fast 不持久化，读回来一律关（老存档里可能残留 true）
+  s.fast = false
+  // keepOn 默认是 true，所以不能用 !!s.keepOn ——
+  // 老存档里没有这个键时会被压成 false，行为会跟默认不一致。
   s.keepOn = (s.keepOn === undefined || s.keepOn === null)
     ? DEFAULT_SETTINGS.keepOn : !!s.keepOn
+  // longpress 现在是三选一的字符串，但要兼容两种老存档：
+  //   true / false（2.4 的开关）、没有这个键
+  if (s.longpress === true) s.longpress = 'hide'
+  else if (s.longpress === false) s.longpress = 'off'
+  else if (s.longpress !== 'hide' && s.longpress !== 'fast' && s.longpress !== 'off') {
+    s.longpress = DEFAULT_SETTINGS.longpress
+  }
   // 旧版本存的是 auto(bool) + autoSpeed 三档，这里直接丢掉、走默认
   delete s.auto
   delete s.autoSpeed
@@ -119,7 +132,12 @@ export function loadSettings(done) {
 }
 
 export function saveSettings(s, done) {
-  writeJSON('settings', s, done)
+  // ⚠️ `fast`（快进）**不持久化**。
+  // 它是阅读时的临时状态、不是偏好设置 —— 存下来的话，
+  // 退出时开着快进、下次进来会直接狂翻剧情（真机上反馈过）。
+  const t = Object.assign({}, s)
+  delete t.fast
+  writeJSON('settings', t, done)
 }
 
 export function loadSaves(done) {

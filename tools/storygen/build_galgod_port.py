@@ -172,15 +172,25 @@ def patch_pages(dst_pages, ver):
     p = os.path.join(dst_pages, "index", "index.ux")
     if os.path.exists(p):
         s = open(p, encoding="utf-8").read()
-        s = sub(s, 
-            '      <text class="title">GalGod</text>\n'
-            '      <text class="sub">想成为Galgame领域大神！！！</text>\n',
-            '      <image class="logo" src="/common/logo.png"></image>\n',
-            "标题-换成logo图")
-        # 标题文字样式换成 logo 图的尺寸
-        s = sub(s, 
-            "  .sub { font-size: 17px; color: #d6bcc8; margin-top: 6px; }",
-            "  .logo { width: %dpx; height: %dpx; }"
+        # galgod 2.3 起把主页顶部的标题文字删掉了（它改用自带 home.png 的完整构图），
+        # 所以这里不能「替换文字」，得往 .shade 后面**插**一个 logo 容器。
+        s = sub(s,
+            '    <div class="shade"></div>\n',
+            '    <div class="shade"></div>\n\n'
+            '    <div class="head">\n'
+            '      <image class="logo" src="/common/logo.png"></image>\n'
+            '    </div>\n',
+            "标题-插入logo块")
+        s = sub(s,
+            '  /* 主页顶部的 "GalGod" + 副标题文字已删掉：\n'
+            '     现在 home.png 里就是原图那张「logo 在左、女孩在右」的完整构图，\n'
+            '     再叠一行文字会把它盖住、而且内容重复。 */',
+            '  /* 标题用原作的大 logo 图（custom/LOGO_white.png）。\n'
+            '     galgod 2.3 起把这里的文字删掉了、改用自带 home.png 的完整构图；\n'
+            '     本作不改原作的标题画，所以放一个 head 容器贴 logo。 */\n'
+            '  .head { position: absolute; top: 54px; left: 0px; width: 336px;\n'
+            '          flex-direction: column; align-items: center; }\n'
+            '  .logo { width: %dpx; height: %dpx; }'
             % (LOGO_W, int(round(LOGO_W * 1527 / 3059))),
             "标题-logo样式")
         # 原作只有本篇与后日谈，所以默认不给章节选择：
@@ -223,18 +233,109 @@ def patch_pages(dst_pages, ver):
             s = sub(s, old_row, new_row)
         else:
             done.append("game(章节按钮未匹配!)")
-        # 只有两篇，「跳到下一章」在通关前等于直接跳去后日谈（剧透），
-        # 所以和章节按钮一起解锁
-        s = sub(s, 
-            '      <div class="mbtn" onclick="nextChapter" onswipe="blockSwipe">',
-            '      <div class="mbtn" if="{{showChapters}}" onclick="nextChapter" '
-            'onswipe="blockSwipe">')
+        # 只有两篇，「下一章」在通关前等于直接跳去后日谈（剧透），
+        # 所以和章节按钮一起解锁。2.5.2 把它和「快退」并成了一行，
+        # 藏起来时让快退占满整行（和上面 章节/CG 一样的处理）。
+        old_nc = ('      <div class="mrow">\n'
+                  '        <div class="mbtn mbtn-half" onclick="nextChapter" '
+                  'onswipe="blockSwipe"><text class="mbtn-t">下一章</text></div>\n'
+                  '        <div class="mbtn mbtn-half" onclick="rewind" '
+                  'onswipe="blockSwipe"><text class="mbtn-t">快退</text></div>\n'
+                  '      </div>\n')
+        new_nc = ('      <div class="mrow" if="{{showChapters}}">\n'
+                  '        <div class="mbtn mbtn-half" onclick="nextChapter" '
+                  'onswipe="blockSwipe"><text class="mbtn-t">下一章</text></div>\n'
+                  '        <div class="mbtn mbtn-half" onclick="rewind" '
+                  'onswipe="blockSwipe"><text class="mbtn-t">快退</text></div>\n'
+                  '      </div>\n'
+                  '      <div class="mbtn" if="{{!showChapters}}" onclick="rewind" '
+                  'onswipe="blockSwipe"><text class="mbtn-t">快退</text></div>\n')
+        s = sub(s, old_nc, new_nc, "下一章门控")
         s = sub(s, "    autoOn: false,\n    fastOn: false",
                       "    autoOn: false,\n    fastOn: false,\n    showChapters: false")
         s = sub(s, "loadCleared((ok) => { this.cleared = ok })",
                       "loadCleared((ok) => { this.cleared = ok; "
                       "this.showChapters = !!ok })")
+
+        # ---------------------------------------------------------- 2.5.2 适配
+        # ① 关掉「全景背景」。2.5.2 的背景是「一张 672 宽的图 + 定时器小步推进 left
+        #    来回扫」，本作明确不要（背景就是一张静态的 336×480 铺满屏幕），
+        #    所以把宽图换回满屏 .layer，并让 startBgPan() 变成空操作。
+        s = sub(s,
+            '    <div class="bgclip" onswipe="blockSwipe">\n'
+            '      <image class="bgwide" style="{{bgStyle}}" src="{{bgSrc}}" '
+            'if="{{bgSrc}}" onswipe="blockSwipe"></image>\n'
+            '    </div>\n',
+            '    <!-- 背景层：一张静态的 336×480 铺满屏幕。\n'
+            '         本作不使用上游的全景背景（宽图 + 定时器平移 left），原因见 README。 -->\n'
+            '    <image class="layer" src="{{bgSrc}}" if="{{bgSrc}}" '
+            'onswipe="blockSwipe"></image>\n',
+            "背景-去全景模板")
+        s = sub(s,
+            "  startBgPan() {\n"
+            "    this.stopBgPan()\n"
+            "    if (!this.bgSrc) { this.bgStyle = ''; return }\n"
+            "    this.bgOffset = 0\n"
+            "    this.bgDir = 1\n"
+            "    this.bgStyle = 'left: 0px;'\n"
+            "    this.bgTimer = setInterval(() => this.bgPanTick(), BG_TICK_MS)\n"
+            "  },",
+            "  startBgPan() {\n"
+            "    // 本作不使用全景背景：背景是一张静态的 336×480 铺满屏幕。\n"
+            "    // 方法保留（applyBg / onShow 还在调它），但不起定时器、不设偏移。\n"
+            "    this.stopBgPan()\n"
+            "    this.bgStyle = ''\n"
+            "  },",
+            "背景-去全景定时器")
+
+        # ② 合并上游重复的 onHide()。2.5.2 里有**两个同名 onHide**，
+        #    后一个把前一个整个覆盖掉 —— 于是「离开阅读页就关常亮 / 清定时器 /
+        #    落盘」全成了死代码（人退出后屏幕一直不熄）。
+        s = sub(s,
+            "  onHide() {\n"
+            "    this.clearTimers()\n"
+            "    this.setKeepScreenOn(false)\n"
+            "    this.flushAutoSave()\n"
+            "    this.flushSeen()\n"
+            "  },\n"
+            "  // 退到后台/关页面时一定收尾 —— 否则下次进来还是快进"
+            "（就是上一版修的那个 bug 的翻版）\n"
+            "  onHide() {\n"
+            "    this.onHoldEnd()\n"
+            "    this.stopRewindRepeat()      // 退到后台就别再退了\n"
+            "  },",
+            "  // ⚠️ 上游 2.5.2 在这里写了**两个同名的 onHide()**，后者覆盖前者，\n"
+            "  // 于是「关常亮 / 清定时器 / 落盘」全成了死代码。这里合并成一个。\n"
+            "  onHide() {\n"
+            "    this.onHoldEnd()\n"
+            "    this.stopRewindRepeat()      // 退到后台就别再退了\n"
+            "    this.clearTimers()\n"
+            "    this.setKeepScreenOn(false)\n"
+            "    this.flushAutoSave()\n"
+            "    this.flushSeen()\n"
+            "  },",
+            "onHide 合并")
+
+        # ③ 去掉上游「bg 不带 cs 就清立绘」的推断。
+        #    上游假设 bg ≡ scene，但本作的剧本里有 **15 处 `show bg`**（不是 scene），
+        #    那些步不该清立绘。本工程的转换器已经按 Scene/Show 区分好了：
+        #    `scene` 会显式发 cs:[]，`show` 不动立绘 —— 所以这条推断在这里会误伤。
+        s = sub(s,
+            "        // `bg` 对应 Ren'Py 的 `scene`（换景），而 scene **会清空所有立绘**。\n"
+            "        // 数据也印证这个语义：换景时如果还想有人，那一步会同时带 cs。\n"
+            "        // 只当换背景处理的话，「换景但没带 cs」的步会沿用上一位人物\n"
+            "        // —— 就是「本该没人的界面却站着上一位」那个 bug（数据里有 61 处）。\n"
+            "        if (node.bg !== undefined) {\n"
+            "          this.applyBg(node.bg)\n"
+            "          if (node.cs === undefined) { this.csRaw = []; this.renderSprites([]) }\n"
+            "        }\n",
+            "        // 上游 2.5.2 在这里做了「bg 不带 cs 就清立绘」的推断（假设 bg ≡ scene）。\n"
+            "        // 本作不合用：剧本里有 15 处是 `show bg`（不是 scene），不该清立绘。\n"
+            "        // 清立绘交给转换器——`scene` 会显式带上 cs:[]，`show` 不带。\n"
+            "        if (node.bg !== undefined) this.applyBg(node.bg)\n",
+            "背景-去自动清立绘")
         open(p, "w", encoding="utf-8").write(s)
+        done.append("game-252")
         if "game(章节按钮未匹配!)" not in done:
             done.append("game")
 
@@ -946,12 +1047,12 @@ def prune(nodes, marks):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ref", default="galgod-band-ref")
-    # 只从 2.3 取这三样：屏幕常亮跨了
-    # manifest / reader.js / settings.ux 三个文件。
-    # 2.3 对它们的改动**仅限**常亮，所以整份拿来就等于
-    # 「2.2 + 常亮」，不必在 2.2 上去手改一堆坐标。
-    ap.add_argument("--keepon-ref", default="galgod-band-23")
+    ap.add_argument("--ref", default="galgod-band-252")
+    # cg.ux 单独取 2.2 的：2.3 起它变成「854 宽的 CG + 按住拖动看全图」，
+    # 本作明确不要那个滑动（CG 一律按屏幕尺寸 336×480 出图）。
+    # 2.5.2 对 cg.ux 的改动（浅色 CG 上给提示文字垫底板之类）全都服务于拖动那套 UI，
+    # 这里用不上，所以整页取 2.2 的无拖动版。
+    ap.add_argument("--cg-ref", default="galgod-band-ref")
     ap.add_argument("--out", default="tinyshadows-band")
     ap.add_argument("--rpyc", default="原始解包/scripts_rpa/scripts/content")
     ap.add_argument("--syq", default="原始解包/scripts_rpa/scripts/roles/syq.rpyc")
@@ -987,24 +1088,14 @@ def main():
     shutil.copy2(os.path.join(src, "common", "reader.js"),
                  os.path.join(common, "reader.js"))
 
-    # 屏幕常亮是 2.3 才有的，而它跨了三个文件：manifest 要声明 system.brightness、
-    # reader.js 要有 keepOn 这个设置项、settings.ux 要有对应的开关和行距。
-    # 2.3 对这三个文件的改动**仅限**常亮，所以整份拿过来即可，不必在 2.2 上
-    # 手改一堆滑块坐标。其余一切（含 game.ux）都用 2.2 的。
-    copied = []
-    kon = os.path.join(args.keepon_ref, "src")
-    if os.path.isdir(kon):
-        for rel in ("manifest.json", "common/reader.js",
-                    "pages/settings/settings.ux"):
-            s2 = os.path.join(kon, rel.replace("/", os.sep))
-            if os.path.exists(s2):
-                shutil.copy2(s2, os.path.join(dst, rel.replace("/", os.sep)))
-                copied.append(rel)
-    print("[1/5] 复制 galgod %s 引擎与页面（7 个页面 + reader.js）；"
-          "另从 %s 取屏幕常亮：%s"
-          % (os.path.basename(os.path.normpath(args.ref)),
-             os.path.basename(os.path.normpath(args.keepon_ref)),
-             "、".join(copied) if copied else "（没找到）"))
+    # cg.ux 单独取 2.2 的无拖动版（原因见 argparse 里 --cg-ref 的说明）
+    cgref = os.path.join(args.cg_ref, "src", "pages", "cg", "cg.ux")
+    if os.path.exists(cgref):
+        shutil.copy2(cgref, os.path.join(dst, "pages", "cg", "cg.ux"))
+        print("      cg.ux 取 %s 的无拖动版"
+              % os.path.basename(os.path.normpath(args.cg_ref)))
+    print("[1/5] 复制 galgod %s 引擎与页面（7 个页面 + reader.js）"
+          % os.path.basename(os.path.normpath(args.ref)))
 
     # ---- 2. 素材
     # 先把剧本读出来（只走 AST、不需要资源下标），这样才能知道要用到哪些立绘。
