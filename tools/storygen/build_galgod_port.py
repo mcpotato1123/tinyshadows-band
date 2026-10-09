@@ -41,8 +41,19 @@ CHUNK = 128
 VER = "1.0.0"
 APP_NAME = "小小的身影，重叠的内心"
 W, H = 336, 480                 # 小米手环 9 Pro 屏幕（designWidth 336 → 1px = 1 物理像素）
-# CG 按屏幕尺寸出图（336x480）。原作 CG 是 16:9 的宽图，这里做居中裁切。
-# （曾经出过 854x480 的完整 16:9 配拖动查看，后来去掉了滑动，就一并回到屏幕尺寸。）
+# 背景出**宽幅 672×480**（比屏幕宽 336）：上游 game.ux 的「全景背景」就是靠
+# .bgwide 的这张宽图 + 定时器推进 left 来回扫。BG_W 必须与 game.ux 里的 BG_W
+# 和 CSS .bgwide 的宽一致。
+BG_W, BG_H = 672, 480
+# CG 出**完整 16:9 的 854×480**：上游 cg.ux 的「按住拖动看全图」靠它，
+# CG_W 必须与 cg.ux 里的 CG_W 一致。
+CG_W, CG_H = 854, 480
+# 调色板色数。尺寸翻倍后体积涨得厉害，这里沿用上游的取值
+# （上游 README：真机实测图片预算 < 9 MB，所以背景收到 80 色、CG 收到 56 色）。
+BG_COLORS = 80
+CG_COLORS = 56
+SP_COLORS = 128
+THUMB_COLORS = 64
 LOGO_W = 288                    # 标题页 logo 的显示宽度
 SPRITE_W, SPRITE_H = 143, 380   # game.ux 里 .sp 的槽位尺寸
 # 立绘取景：以脸为中心，脸顶距画面上沿的比例
@@ -258,37 +269,10 @@ def patch_pages(dst_pages, ver):
                       "this.showChapters = !!ok })")
 
         # ---------------------------------------------------------- 2.5.2 适配
-        # ① 关掉「全景背景」。2.5.2 的背景是「一张 672 宽的图 + 定时器小步推进 left
-        #    来回扫」，本作明确不要（背景就是一张静态的 336×480 铺满屏幕），
-        #    所以把宽图换回满屏 .layer，并让 startBgPan() 变成空操作。
-        s = sub(s,
-            '    <div class="bgclip" onswipe="blockSwipe">\n'
-            '      <image class="bgwide" style="{{bgStyle}}" src="{{bgSrc}}" '
-            'if="{{bgSrc}}" onswipe="blockSwipe"></image>\n'
-            '    </div>\n',
-            '    <!-- 背景层：一张静态的 336×480 铺满屏幕。\n'
-            '         本作不使用上游的全景背景（宽图 + 定时器平移 left），原因见 README。 -->\n'
-            '    <image class="layer" src="{{bgSrc}}" if="{{bgSrc}}" '
-            'onswipe="blockSwipe"></image>\n',
-            "背景-去全景模板")
-        s = sub(s,
-            "  startBgPan() {\n"
-            "    this.stopBgPan()\n"
-            "    if (!this.bgSrc) { this.bgStyle = ''; return }\n"
-            "    this.bgOffset = 0\n"
-            "    this.bgDir = 1\n"
-            "    this.bgStyle = 'left: 0px;'\n"
-            "    this.bgTimer = setInterval(() => this.bgPanTick(), BG_TICK_MS)\n"
-            "  },",
-            "  startBgPan() {\n"
-            "    // 本作不使用全景背景：背景是一张静态的 336×480 铺满屏幕。\n"
-            "    // 方法保留（applyBg / onShow 还在调它），但不起定时器、不设偏移。\n"
-            "    this.stopBgPan()\n"
-            "    this.bgStyle = ''\n"
-            "  },",
-            "背景-去全景定时器")
-
-        # ② 合并上游重复的 onHide()。2.5.2 里有**两个同名 onHide**，
+        # 全景背景与 CG 拖动都**按上游原样保留**：
+        #   背景 —— game.ux 的 .bgwide 宽图（672×480）+ 定时器推进 left
+        #   CG   —— cg.ux 的 .big 宽图（854×480）+ 按住拖动看全图
+        # 对应素材尺寸见文件顶部的 BG_W / CG_W。\n\n        # ② 合并上游重复的 onHide()。2.5.2 里有**两个同名 onHide**，
         #    后一个把前一个整个覆盖掉 —— 于是「离开阅读页就关常亮 / 清定时器 /
         #    落盘」全成了死代码（人退出后屏幕一直不熄）。
         s = sub(s,
@@ -523,21 +507,21 @@ def fit_cover(im, w, h):
                     (nw - w) // 2 + w, (nh - h) // 2 + h))
 
 
-def save_png8(im, path, keep_alpha=False):
+def save_png8(im, path, colors=256, keep_alpha=False):
     """存成 PNG8。
 
     真机上 JPEG 解码不可靠（galgod 的 build.js 会就此告警），所以全部用 PNG；
     再用调色板量化把体积压下来——336x480 这个尺寸下画质差异看不出来。
     """
     if keep_alpha:
-        im.convert("RGBA").quantize(colors=255, method=Image.FASTOCTREE) \
+        im.convert("RGBA").quantize(colors=max(2, colors - 1), method=Image.FASTOCTREE) \
             .save(path, "PNG", optimize=True)
     else:
-        im.convert("RGB").convert("P", palette=Image.ADAPTIVE, colors=256) \
+        im.convert("RGB").convert("P", palette=Image.ADAPTIVE, colors=colors) \
             .save(path, "PNG", optimize=True)
 
 
-def build_flat(src_dir, out_dir, names, w=336, h=480, finder=None):
+def build_flat(src_dir, out_dir, names, w=336, h=480, colors=256, finder=None):
     """背景 / CG：从全分辨率原图缩到屏幕尺寸，存 PNG8。"""
     os.makedirs(out_dir, exist_ok=True)
     n = 0
@@ -564,7 +548,8 @@ def build_flat(src_dir, out_dir, names, w=336, h=480, finder=None):
                 out = flat
             else:
                 out = im.convert("RGB")
-            save_png8(fit_cover(out, w, h), os.path.join(out_dir, name + ".png"))
+            save_png8(fit_cover(out, w, h), os.path.join(out_dir, name + ".png"),
+                      colors=colors)
         n += 1
     return n
 
@@ -584,7 +569,7 @@ def build_thumbs(cg_dir, out_dir, names, prefix="g"):
             top = max(0, min(im.height - h, int(im.height * 0.45 - h / 2)))
             im = im.crop((0, top, w, top + h)).resize((96, 54), Image.LANCZOS)
         fn = "%s%d.png" % (prefix, i)
-        im.convert("P", palette=Image.ADAPTIVE, colors=256) \
+        im.convert("P", palette=Image.ADAPTIVE, colors=THUMB_COLORS) \
             .save(os.path.join(out_dir, fn), "PNG", optimize=True)
         out[name] = "/common/img/t/" + fn
     return out
@@ -640,7 +625,8 @@ def build_sprites(fg_root, rpyc, out_dir, wanted, extra_faces):
                             max(1, int(round(bust.height * s))), ), Image.LANCZOS)
         canvas = Image.new("RGBA", (SPRITE_W, SPRITE_H), (0, 0, 0, 0))
         canvas.alpha_composite(bust, ((SPRITE_W - bust.width) // 2, 0))
-        save_png8(canvas, os.path.join(out_dir, key + ".png"), keep_alpha=True)
+        save_png8(canvas, os.path.join(out_dir, key + ".png"),
+                  colors=SP_COLORS, keep_alpha=True)
         made[key] = True
         return key
 
@@ -1048,11 +1034,6 @@ def prune(nodes, marks):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", default="galgod-band-252")
-    # cg.ux 单独取 2.2 的：2.3 起它变成「854 宽的 CG + 按住拖动看全图」，
-    # 本作明确不要那个滑动（CG 一律按屏幕尺寸 336×480 出图）。
-    # 2.5.2 对 cg.ux 的改动（浅色 CG 上给提示文字垫底板之类）全都服务于拖动那套 UI，
-    # 这里用不上，所以整页取 2.2 的无拖动版。
-    ap.add_argument("--cg-ref", default="galgod-band-ref")
     ap.add_argument("--out", default="tinyshadows-band")
     ap.add_argument("--rpyc", default="原始解包/scripts_rpa/scripts/content")
     ap.add_argument("--syq", default="原始解包/scripts_rpa/scripts/roles/syq.rpyc")
@@ -1088,12 +1069,6 @@ def main():
     shutil.copy2(os.path.join(src, "common", "reader.js"),
                  os.path.join(common, "reader.js"))
 
-    # cg.ux 单独取 2.2 的无拖动版（原因见 argparse 里 --cg-ref 的说明）
-    cgref = os.path.join(args.cg_ref, "src", "pages", "cg", "cg.ux")
-    if os.path.exists(cgref):
-        shutil.copy2(cgref, os.path.join(dst, "pages", "cg", "cg.ux"))
-        print("      cg.ux 取 %s 的无拖动版"
-              % os.path.basename(os.path.normpath(args.cg_ref)))
     print("[1/5] 复制 galgod %s 引擎与页面（7 个页面 + reader.js）"
           % os.path.basename(os.path.normpath(args.ref)))
 
@@ -1130,13 +1105,13 @@ def main():
     bgs = collect(args.bg_src)
     cgs = collect(args.cg_src)
 
-    for sub, src_dir, names, (tw, th) in (
-            ("b", args.bg_src, bgs, (W, H)),
-            ("c", args.cg_src, cgs, (W, H))):
+    for sub, src_dir, names, (tw, th), cols in (
+            ("b", args.bg_src, bgs, (BG_W, BG_H), BG_COLORS),
+            ("c", args.cg_src, cgs, (CG_W, CG_H), CG_COLORS)):
         d = os.path.join(common, "img", sub)
         if os.path.isdir(d):
             shutil.rmtree(d)
-        build_flat(src_dir, d, names, w=tw, h=th, finder=find_src)
+        build_flat(src_dir, d, names, w=tw, h=th, colors=cols, finder=find_src)
 
     sp_dir = os.path.join(common, "img", "s")
     nsp, sp_feet = build_sprites(args.fg, args.syq, sp_dir,

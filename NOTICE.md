@@ -12,8 +12,8 @@
 ## 一、引擎与界面（MIT 协议）
 
 来自开源项目 **galgod-band**（作者 mcpotato1123），基于 MIT 协议使用，基线版本 **2.5.2**。
-本工程对其做了少量改动（关掉背景全景与 CG 拖动、章节门控、鉴赏解锁判定、
-补标题 logo，并修掉上游 onHide 重名与 g 自动清立绘两处问题），
+本工程对其做了少量改动（章节门控、鉴赏解锁判定、补标题 logo，
+并修掉上游 onHide 重名与 g 自动清立绘两处问题），
 改动点见 README 的「与原作的差异」一节。
 
 | 路径 | 内容 |
@@ -31,9 +31,9 @@
 | 路径 | 内容 | 版权 |
 |---|---|---|
 | `src/common/story/` | 剧本文字（2,503 句对白，本篇 + 后日谈） | 原作《小小的身影，重叠的内心》及其开发方 |
-| `src/common/img/b/` | 背景 25 张 | 同上 |
+| `src/common/img/b/` | 背景 25 张（672×480 宽幅，供全景平移） | 同上 |
 | `src/common/img/s/` | 立绘 94 张（含裸足 / 白丝 / 黑丝三套差分） | 同上 |
-| `src/common/img/c/` | CG / SDCG 40 张 | 同上 |
+| `src/common/img/c/` | CG / SDCG 40 张（854×480 完整 16:9） | 同上 |
 | `src/common/img/t/` | CG 鉴赏缩略图 8 张 | 同上（由上面裁切而来） |
 | `src/common/home.png` | 标题画（原作 `titlenew_bg_1`） | 同上 |
 | `src/common/logo.png` | 标题 logo（原作 `LOGO_white`） | 同上 |

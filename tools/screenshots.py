@@ -84,7 +84,14 @@ def page_cg_view(src, img, groups, gi, pi):
     p = P.asset(src, cg)
     if p:
         with Image.open(p) as im:
-            page.alpha_composite(im.convert("RGBA").resize((W, H), Image.LANCZOS))
+            # CG 现在是 854 宽的完整 16:9，查看器只显示中间 336（object-fit: cover）。
+            # 上游打开一张 CG 时停在 .big 的 left 位置（setPan(CG_PAN_RANGE/2) 被
+            # 夹成 0 = 最左边），所以这里按「看到最左边那一段」来画。
+            im = im.convert("RGBA")
+            sc = max(W / im.width, H / im.height)
+            im = im.resize((max(W, int(im.width * sc)), max(H, int(im.height * sc))),
+                           Image.LANCZOS)
+            page.alpha_composite(im, (0, (H - im.height) // 2))
     d = ImageDraw.Draw(page, "RGBA")
     P.blend(page, (10, 10, 210, 38), 14, (0, 0, 0, 150))
     d.text((22, 15), g["n"], font=P.font(16), fill=(255, 230, 238))

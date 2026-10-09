@@ -12,9 +12,9 @@
          玩家一拖就把整个背景拖走。**只给 .page 加 overflow 不够保险**
          （根节点是页面本身，运行时不一定会把它当普通容器处理），
          所以这里用一个明确的子容器再裁一层。 -->
-    <!-- 背景层：一张静态的 336×480 铺满屏幕。
-         本作不使用上游的全景背景（宽图 + 定时器平移 left），原因见 README。 -->
-    <image class="layer" src="{{bgSrc}}" if="{{bgSrc}}" onswipe="blockSwipe"></image>
+    <div class="bgclip" onswipe="blockSwipe">
+      <image class="bgwide" style="{{bgStyle}}" src="{{bgSrc}}" if="{{bgSrc}}" onswipe="blockSwipe"></image>
+    </div>
     <div class="solid" if="{{showBlack}}"></div>
     <div class="solid-white" if="{{showWhite}}"></div>
 
@@ -988,10 +988,12 @@ export default {
   // 每 BG_TICK_MS 把 left 推进 BG_STEP_PX，走到头再往回走，来回扫。
   // 完全不碰 CSS transition —— 那玩意在这个运行时上会渲染出接缝。
   startBgPan() {
-    // 本作不使用全景背景：背景是一张静态的 336×480 铺满屏幕。
-    // 方法保留（applyBg / onShow 还在调它），但不起定时器、不设偏移。
     this.stopBgPan()
-    this.bgStyle = ''
+    if (!this.bgSrc) { this.bgStyle = ''; return }
+    this.bgOffset = 0
+    this.bgDir = 1
+    this.bgStyle = 'left: 0px;'
+    this.bgTimer = setInterval(() => this.bgPanTick(), BG_TICK_MS)
   },
 
   bgPanTick() {
