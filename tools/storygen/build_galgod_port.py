@@ -319,38 +319,21 @@ def patch_pages(dst_pages, ver):
             "        if (node.bg !== undefined) this.applyBg(node.bg)\n",
             "背景-去自动清立绘")
 
-        # ③ 正文页的 CG 层要**显式居中裁切**。
-        #    CG 是 854 宽的完整 16:9（比屏幕宽 518），而 Vela 的
-        #    `object-fit: cover` 是**按左上对齐**裁的，不是居中 —— 直接铺会把
-        #    画面左半边显示出来、把人物裁到框外（真机上表现为「人物没了」）。
-        #    CG 以前正好是 336×480、cover 等于不裁，所以一直没暴露。
-        #    这里照上游 cg.ux 那套验证过的做法：套一个 overflow:hidden 的裁切
-        #    容器，用 left 明确偏移到中间。
-        cg_off = (CG_W - W) // 2
+        # ④ 解锁记账要**两套下标都记**：正文页显示的是 336 那套，
+        #    画廊列的是 854 那套。只记一个的话，在正文里看过的 CG
+        #    到了画廊里还是锁着的。
         s = sub(s,
-            '    <!-- CG 层 -->\n'
-            '    <image class="layer" src="{{cgSrc}}" if="{{cgSrc}}" '
-            'onswipe="blockSwipe"></image>\n',
-            '    <!-- CG 层：CG 是 %d 宽的完整 16:9，比屏幕宽 %d。\n'
-            '         Vela 的 object-fit:cover 按左上对齐裁，直接铺会显示左半边、\n'
-            '         把人物裁出画面，所以用裁切容器 + left 偏移来居中。 -->\n'
-            '    <div class="cgclip" if="{{cgSrc}}" onswipe="blockSwipe">\n'
-            '      <image class="cgwide" style="left: -%dpx;" src="{{cgSrc}}" '
-            'onswipe="blockSwipe"></image>\n'
-            '    </div>\n' % (CG_W, CG_W - W, cg_off),
-            "CG层-居中裁切")
-        s = sub(s,
-            '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
-            'height: 480px; object-fit: cover; }\n',
-            '  .layer { position: absolute; top: 0px; left: 0px; width: 336px; '
-            'height: 480px; object-fit: cover; }\n'
-            '  /* 正文页的 CG 层：把 %d 宽的 CG 居中裁到 336。\n'
-            '     left 偏移交给内联 style —— 上游能工作的 .bgwide / .big 都是这么写的。 */\n'
-            '  .cgclip { position: absolute; top: 0px; left: 0px; width: 336px; '
-            'height: 480px; overflow: hidden; }\n'
-            '  .cgwide { position: absolute; top: 0px; left: 0px; width: %dpx; '
-            'height: 480px; object-fit: fill; }\n' % (CG_W, CG_W),
-            "CG层-居中CSS")
+            "if (node.cg >= 0) this.markSeen(node.cg)",
+            "if (node.cg >= 0) {\n"
+            "            this.markSeen(node.cg)\n"
+            "            const cw = CG_WIDE[node.cg]\n"
+            "            if (cw !== undefined) this.markSeen(cw)\n"
+            "          }",
+            "CG-解锁双记")
+
+        open(p, "w", encoding="utf-8").write(s)
+        done.append("game-252")
+
         open(p, "w", encoding="utf-8").write(s)
         done.append("game-252")
         if "game(章节按钮未匹配!)" not in done:
@@ -393,6 +376,15 @@ def patch_pages(dst_pages, ver):
                           "    if (!this.anySeen(g)) {")
         # 本作**不再给 cg.ux 打任何补丁**：鉴赏页就是 galgod 2.2 的原版——
         # 列表 + 大图 + 底部 ‹ n/N › 翻差分，没有拖动/滑动那一套。
+        # ⑤ 画廊打开一张 CG 时停在**正中间**。
+        #    上游写的是 `setPan(CG_PAN_RANGE / 2)`（正数），而 setPan 第一句就是
+        #    `if (l > 0) l = 0` —— 永远被夹到最左边，于是只看到 CG 的左半边、
+        #    人物被裁掉（真机反馈「cg 鉴赏那张人物也只有一半」）。
+        #    按上游自己注释的意思（「每张 CG 都从中间开始看」）加个负号。
+        s = sub(s, "    this.setPan(CG_PAN_RANGE / 2)",
+                "    // 负的一半：setPan() 会把正数夹成 0（=最左边）\n"
+                "    this.setPan(-CG_PAN_RANGE / 2)",
+                "CG-起始居中")
         if "cg" not in done:
             done.append("cg")
         open(p, "w", encoding="utf-8").write(s)
@@ -406,6 +398,13 @@ def patch_pages(dst_pages, ver):
             s = sub(s, 
                 "import { IMG } from '../../common/assets.js'",
                 "import { IMG, SP_FEET } from '../../common/assets.js'")
+            # ⚠️ 必须紧跟在上一步之后：全文替换的顺序是先注入 markSeen（那里已经
+            # 出现了 CG_WIDE 这个名字），所以幂等判断千万不能写 `"CG_WIDE" not in s`
+            # —— 那会被提前满足、整段跳过，结果是引用了没导入的符号（真机直接报错）。
+            s = sub(s,
+                "import { IMG, SP_FEET } from '../../common/assets.js'",
+                "import { IMG, SP_FEET, CG_WIDE } from '../../common/assets.js'",
+                "CG-导入映射表")
             s = sub(s, 
                 "  renderSprites(cs) {\n"
                 "    let l = '', c = '', r = ''\n"
@@ -1140,7 +1139,8 @@ def main():
 
     for sub, src_dir, names, (tw, th), cols in (
             ("b", args.bg_src, bgs, (BG_W, BG_H), BG_COLORS),
-            ("c", args.cg_src, cgs, (CG_W, CG_H), CG_COLORS)):
+            ("c", args.cg_src, cgs, (W, H), CG_COLORS),
+            ("cw", args.cg_src, cgs, (CG_W, CG_H), CG_COLORS)):
         d = os.path.join(common, "img", sub)
         if os.path.isdir(d):
             shutil.rmtree(d)
@@ -1167,6 +1167,11 @@ def main():
     for name in cgs:
         cg_index[name] = len(img)
         img.append("/common/img/c/%s.png" % name)
+    # 画廊拖动用的 854 宽完整版。正文页用上面那套 336 的。
+    cgw_index = {}
+    for name in cgs:
+        cgw_index[name] = len(img)
+        img.append("/common/img/cw/%s.png" % name)
 
     # ---- 3. 剧本（cmds 在素材那一步已经读好，用的是原始属性串）
     b = Builder(bg_index, sp_index, cg_index,
@@ -1237,6 +1242,10 @@ def main():
         f.write("// 背景代号 -> 图片下标（-1 纯黑 / -2 纯白）\n")
         f.write("export const BG = %s\n\n" % js_obj(
             {k: v for k, v in sorted(bg_index.items(), key=lambda kv: kv[1])}))
+        f.write("// 正文页那套 336 的 CG 下标 -> 画廊那套 854 的下标。\n")
+        f.write("// 解锁记账要两边都记，否则在正文里看过、画廊里还是锁的。\n")
+        f.write("export const CG_WIDE = %s\n\n" % js_obj(
+            {cg_index[k2]: cgw_index[k2] for k2 in cgs}))
         f.write("// 立绘 key -> 图片下标\n")
         f.write("export const SP = %s\n\n" % js_obj(
             {k: v for k, v in sorted(sp_index.items(), key=lambda kv: kv[1])}))
@@ -1289,7 +1298,7 @@ def main():
         members += sorted(have - set(members))
         entries.append((gid, gallery_name(gid), members))
 
-    thumbs = build_thumbs(os.path.join(common, "img", "c"),
+    thumbs = build_thumbs(os.path.join(common, "img", "cw"),
                           os.path.join(common, "img", "t"),
                           [e[2][0] for e in entries])
     groups = []
@@ -1297,8 +1306,8 @@ def main():
         groups.append({"n": title,
                        "th": thumbs.get(members[0],
                                         "/common/img/c/%s.png" % members[0]),
-                       "u": cg_index[members[0]],
-                       "im": [cg_index[m] for m in members]})
+                       "u": cgw_index[members[0]],
+                       "im": [cgw_index[m] for m in members]})
     with open(os.path.join(common, "cglist.js"), "w", encoding="utf-8") as f:
         f.write("// 由 tools/build_galgod_port.py 自动生成，请勿手改\n")
         f.write("// 分组取自原作 screens/gallery_screen.rpyc 的 Gallery()；\n")

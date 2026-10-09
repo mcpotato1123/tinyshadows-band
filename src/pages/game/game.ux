@@ -23,12 +23,8 @@
     <image class="sp sp-c" src="{{spC}}" if="{{spC}}" onswipe="blockSwipe"></image>
     <image class="sp sp-r" src="{{spR}}" if="{{spR}}" onswipe="blockSwipe"></image>
 
-    <!-- CG 层：CG 是 854 宽的完整 16:9，比屏幕宽 518。
-         Vela 的 object-fit:cover 按左上对齐裁，直接铺会显示左半边、
-         把人物裁出画面，所以用裁切容器 + left 偏移来居中。 -->
-    <div class="cgclip" if="{{cgSrc}}" onswipe="blockSwipe">
-      <image class="cgwide" style="left: -259px;" src="{{cgSrc}}" onswipe="blockSwipe"></image>
-    </div>
+    <!-- CG 层 -->
+    <image class="layer" src="{{cgSrc}}" if="{{cgSrc}}" onswipe="blockSwipe"></image>
 
     <!-- 回忆滤镜 -->
     <div class="tint" if="{{tint}}" onswipe="blockSwipe"></div>
@@ -118,10 +114,6 @@
   }
 
   .layer { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; object-fit: cover; }
-  /* 正文页的 CG 层：把 854 宽的 CG 居中裁到 336。
-     left 偏移交给内联 style —— 上游能工作的 .bgwide / .big 都是这么写的。 */
-  .cgclip { position: absolute; top: 0px; left: 0px; width: 336px; height: 480px; overflow: hidden; }
-  .cgwide { position: absolute; top: 0px; left: 0px; width: 854px; height: 480px; object-fit: fill; }
 
   /* 全景背景：比屏幕宽 BG_PAN_RANGE 的一张宽图，left 由定时器小步推进。
      两层保险：
@@ -211,7 +203,7 @@ import storage from '@system.storage'
 import prompt from '@system.prompt'
 import file from '@system.file'
 import brightness from '@system.brightness'
-import { IMG, SP_FEET } from '../../common/assets.js'
+import { IMG, SP_FEET, CG_WIDE } from '../../common/assets.js'
 import {
   DEFAULT_SETTINGS, autoDelay, loadSettings, saveSettings, paginateText,
   loadAutoSave, saveAutoSave, loadSeen, saveSeen, loadCleared, markCleared
@@ -741,7 +733,11 @@ export default {
         if (node.cs !== undefined) { this.csRaw = node.cs; this.renderSprites(node.cs) }
         if (node.cg !== undefined) {
           this.cgSrc = node.cg >= 0 ? (IMG[node.cg] || '') : ''
-          if (node.cg >= 0) this.markSeen(node.cg)
+          if (node.cg >= 0) {
+            this.markSeen(node.cg)
+            const cw = CG_WIDE[node.cg]
+            if (cw !== undefined) this.markSeen(cw)
+          }
         }
         if (node.tint !== undefined) this.tint = node.tint
 

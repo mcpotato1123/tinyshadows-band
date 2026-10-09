@@ -269,7 +269,8 @@ export default {
     this.bigSrc = IMG[g.im[this.curPage]] || ''
     this.pageNo = this.curPage + 1
     // 每张 CG 都从中间开始看 —— 这是最常见的构图，两侧按需拖出来
-    this.setPan(CG_PAN_RANGE / 2)
+    // 负的一半：setPan() 会把正数夹成 0（=最左边）
+    this.setPan(-CG_PAN_RANGE / 2)
   },
 
   setPan(v) {
