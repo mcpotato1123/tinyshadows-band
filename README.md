@@ -95,6 +95,7 @@ tinyshadows-band/
       ├─ rpyc_dump.py / rpyc_expr.py / scan_original.py   分析原作脚本
       └─ simulate_galgod.mjs   剧情流程模拟器：复刻 game.ux 的语义跑全部路线
 ```
+```
 
 **仓库里已经带了生成好的剧本与美术资源**（`src/common/story/`、`src/common/img/`），
 所以只想改代码的话直接 `npm install && npm run build` 就行，不需要原版游戏。
