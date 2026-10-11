@@ -9,10 +9,12 @@
 对话      2,503 句（全量，非删减）
 美术      背景 25（**672×480 宽幅**，全景用）/ 立绘 94（143×380，含裸足/白丝/黑丝三套差分）
           CG 40（**854×480 完整 16:9**，可拖动看全图）/ 鉴赏缩略图 8 + 标题画 + logo + 图标
+**（已删除）**
 分支      3 个选择点，2 个结局（真结局 + 一个「擦肩而过」）
 阅读      长按快进（按住才走）/ 快退（60 步历史）/ 下滑开菜单 / 右滑快退
 动态      背景全景（672 宽图，定时器推进 left）· CG 按住拖动看全图
 CG 鉴赏   8 组 / 31 张差分图，按原作 gallery_screen.rpy 的分组与解锁条件
+**已删除**
 页面      7 个：主页 / 正文 / 存档 / 章节 / CG 鉴赏 / 设置 / 关于
 协议      代码 MIT（见 LICENSE）；剧本与美术资源不在 MIT 范围内（见 NOTICE.md）
 产物      dist/com.tinyshadows.band.debug.2.5.2.rpk   8.04 MB
@@ -65,20 +67,6 @@ tinyshadows-band/
 ├─ src/                      快应用源码（Vela 固定目录名）
 │  ├─ manifest.json          应用清单：包名/图标/路由/features/designWidth
 │  ├─ app.ux                 应用入口（本工程不用全局生命周期）
-│  ├─ common/
-│  │   ├─ assets.js          ← 生成：图片索引表（剧本里的资源号就是数组下标）
-│  │   ├─ cglist.js          ← 生成：CG 鉴赏分组与解锁条件
-│  │   ├─ reader.js          公共逻辑：设置项、storage 封装、换行与分页、自动播放时长
-│  │   ├─ home.png           标题画（原作 titlenew_bg_1）
-│  │   ├─ logo.png           标题 logo（原作 custom/LOGO_white.png）
-│  │   ├─ icon.png           应用图标（原作 gui/window_icon.png）
-│  │   ├─ img/b/*.png        ← 生成：背景 25 张 336×480
-│  │   ├─ img/s/*.png        ← 生成：立绘 94 张 143×380（带透明通道）
-│  │   ├─ img/c/*.png        ← 生成：CG / SDCG 40 张 336×480（满屏）
-│  │   ├─ img/t/g0..7.png    ← 生成：CG 鉴赏缩略图 8 张 96×54
-│  │   └─ story/
-│  │       ├─ index.txt      ← 生成：章节表 + 分块表（内容是 JSON，用 .txt 扩展名）
-│  │       └─ chunk-000.txt… ← 生成：21 个分块，每块 128 个节点
 │  └─ pages/
 │      ├─ index/             主页：继续 / 开始 / 存档 / 章节 / CG / 设置 / 关于 / 退出
 │      ├─ game/              正文阅读器（引擎核心）
